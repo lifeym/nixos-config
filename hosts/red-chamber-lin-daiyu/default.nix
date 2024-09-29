@@ -83,6 +83,7 @@
   environment.systemPackages = with pkgs; [
     chezmoi
     curl
+    gh
     git
     gnumake
     go-task
