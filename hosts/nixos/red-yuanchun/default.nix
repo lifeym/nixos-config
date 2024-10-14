@@ -83,11 +83,11 @@
   environment.systemPackages = with pkgs; [
     chezmoi
     curl
+    dua
     gh
     git
     gnumake
     go-task
-    ncdu
     ripgrep
     termscp
     vifm

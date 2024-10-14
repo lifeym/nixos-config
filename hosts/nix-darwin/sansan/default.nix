@@ -17,7 +17,6 @@
       # go-task
       hledger
       htop
-      ncdu
       neovim
       nmap
       nushell
