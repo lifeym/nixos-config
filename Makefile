@@ -22,4 +22,4 @@ disk-red-yuanchun:
 
 .PHONY: install-%
 install-%:
-	nix-install --option substituters "https://mirror.sjtu.edu.cn/nix-channels/store" --flake .#$*
+	nixos-install --option substituters "https://mirror.sjtu.edu.cn/nix-channels/store" --flake .#$*
