@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, myargs, ... }:
+{ config, lib, pkgs, myargs, disko, ... }:
 
 {
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -15,10 +15,16 @@
   # Vmware tools, for vmware guest ONLY
   virtualisation.vmware.guest.enable = true;
 
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+
+    # disko config
+    disko.nixosModules.disko
+    ./disko-config.nix
+  ];
+
+  disko.devices.disk.main.device = "/dev/sda";
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;

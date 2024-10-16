@@ -6,11 +6,17 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable-small";
     nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-24.05";
+
+    # nix-darwin
     nix-darwin.url = "github:LnL7/nix-darwin";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+
+    # disko
+    disko.url = "github:nix-community/disko/latest";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nix-darwin, ...}@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ...}@inputs:
   let
     genSpecialArgs = system:
       inputs
@@ -29,6 +35,7 @@
       };
   in {
     nixosConfigurations = {
+      # desktop vm (vmware) for test.
       red-yuanchun =
       let
         system = "x86_64-linux";
