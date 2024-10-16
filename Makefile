@@ -7,11 +7,10 @@ DISK_MAIN := /dev/sda
 
 .PHONY: disk-red-yuanchun
 disk-red-yuanchun:
-	read -p "This will erase all data from devie `${DISK_MAIN}`, press any key then <Enter> to continue, <C+c> to stop:"\
-		&& sudo parted ${DISK_MAIN} -- mklabel gpt\
-		&& sudo parted ${DISK_MAIN} -- mkpart root ext4 512MB -8GB\
-		&& sudo parted ${DISK_MAIN} -- mkpart swap linux-swap -8GB 100%\
-		&& sudo parted ${DISK_MAIN} -- mkpart ESP fat32 1MB 512MB\
+	parted ${DISK_MAIN} -- mklabel gpt\
+		&& parted ${DISK_MAIN} -- mkpart root ext4 512MB -8GB\
+		&& parted ${DISK_MAIN} -- mkpart swap linux-swap -8GB 100%\
+		&& parted ${DISK_MAIN} -- mkpart ESP fat32 1MB 512MB\
 		&& sudo parted ${DISK_MAIN} -- set 3 esp on\
 		&& sudo mkfs.ext4 -L nixos ${DISK_MAIN}1\
 		&& sudo mkswap -L swap ${DISK_MAIN}2\
@@ -20,3 +19,7 @@ disk-red-yuanchun:
 		&& sudo mkdir -p /mnt/boot\
 		&& sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot\
 		&& sudo swapon ${DISK_MAIN}2
+
+.PHONY: install
+install:
+	nix-install --option substituters "https://mirror.sjtu.edu.cn/nix-channels/store"
