@@ -20,6 +20,6 @@ disk-red-yuanchun:
 		&& sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot\
 		&& sudo swapon ${DISK_MAIN}2
 
-.PHONY: install
-install:
-	nix-install --option substituters "https://mirror.sjtu.edu.cn/nix-channels/store"
+.PHONY: install-%
+install-%:
+	nix-install --option substituters "https://mirror.sjtu.edu.cn/nix-channels/store" --flake .#$*
