@@ -5,7 +5,7 @@ hardware-config-nixos-%:
 
 DISK_MAIN := /dev/sda
 
-.PHONY: disko-install-nixos-%
+.PHONY: disk-red-yuanchun
 disk-red-yuanchun:
 	read -p "This will erase all data from devie `${DISK_MAIN}`, press any key then <Enter> to continue, <C+c> to stop:"\
 		&& sudo parted ${DISK_MAIN} -- mklabel gpt\
@@ -13,10 +13,10 @@ disk-red-yuanchun:
 		&& sudo parted ${DISK_MAIN} -- mkpart swap linux-swap -8GB 100%\
 		&& sudo parted ${DISK_MAIN} -- mkpart ESP fat32 1MB 512MB\
 		&& sudo parted ${DISK_MAIN} -- set 3 esp on\
-		&& sudo mkfs.ext4 -L nixos ${DISK_MAIN}\
-		&& sudo mkswap -L swap /dev/sda2\
-		&& sudo mkfs.fat -F 32 -n boot /dev/sda3\
+		&& sudo mkfs.ext4 -L nixos ${DISK_MAIN}1\
+		&& sudo mkswap -L swap ${DISK_MAIN}2\
+		&& sudo mkfs.fat -F 32 -n boot ${DISK_MAIN}3\
 		&& sudo mount /dev/disk/by-label/nixos /mnt\
 		&& sudo mkdir -p /mnt/boot\
 		&& sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot\
-		&& sudo swapon /dev/sda2
+		&& sudo swapon ${DISK_MAIN}2
