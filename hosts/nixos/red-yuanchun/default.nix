@@ -3,7 +3,9 @@
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
 { config, lib, pkgs, myargs, disko, ... }:
-
+let
+  hostName = "red-yuanchun";
+in
 {
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
@@ -30,10 +32,10 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # networking.hostName = "nixos"; # Define your hostname.
-  # Pick only one of the below networking options.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
-  networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
+  networking = {
+    inherit hostName;
+    networkmanager.enable = true;  # Easiest to use and most distros use this by default.
+  };
 
   # Set your time zone.
   time.timeZone = "Asia/Shanghai";
@@ -149,4 +151,3 @@
   system.stateVersion = "24.11"; # Did you read the comment?
 
 }
-

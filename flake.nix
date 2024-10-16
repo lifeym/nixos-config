@@ -46,7 +46,7 @@
         nixpkgs.lib.nixosSystem {
           # system = "x86_64-linux";
           inherit system;
-          specialArgs = inputs // { inherit myargs; };
+          specialArgs = genSpecialArgs system;
           modules = [
             ./hosts/nixos/red-yuanchun
           ];
