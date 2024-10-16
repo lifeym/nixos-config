@@ -10,13 +10,9 @@
     # nix-darwin
     nix-darwin.url = "github:LnL7/nix-darwin";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
-
-    # disko
-    disko.url = "github:nix-community/disko/latest";
-    disko.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-stable, nix-darwin, disko, ...}@inputs:
+  outputs = { self, nixpkgs, nixpkgs-stable, nix-darwin, ...}@inputs:
   let
     genSpecialArgs = system:
       inputs
@@ -39,9 +35,6 @@
       red-yuanchun =
       let
         system = "x86_64-linux";
-        myargs = {
-          username = "lifeym";
-        };
       in
         nixpkgs.lib.nixosSystem {
           # system = "x86_64-linux";

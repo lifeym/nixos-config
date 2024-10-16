@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, myargs, disko, ... }:
+{ config, lib, pkgs, pkgs-stable, ... }:
 let
   hostName = "red-yuanchun";
 in
@@ -20,13 +20,7 @@ in
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-
-    # disko config
-    disko.nixosModules.disko
-    ./disko-config.nix
   ];
-
-  disko.devices.disk.main.device = "/dev/sda";
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
@@ -102,6 +96,8 @@ in
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wezterm
     wget
+  ] ++ [
+    pkgs-stable.go-task
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
