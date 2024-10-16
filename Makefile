@@ -6,7 +6,7 @@ disko-nixos-%:
 .PHONY: hardware-config-nixos-%
 hardware-config-nixos-%:
 	[ -d hosts/nixos/$* ] && nixos-generate-config --dir hosts/nixos/$* --no-filesystems
-	-@rm hosts/nixos/$*/configurations.nix # not used
+	-@rm hosts/nixos/$*/configuration.nix # not used
 
 .PHONY: disko-install-nixos-%
 disko-install-nixos-%: hardware-config
