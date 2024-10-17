@@ -23,6 +23,18 @@
 
   outputs = { self, nixpkgs, nixpkgs-stable, nix-darwin, ...}@inputs:
   let
+    utils = import ./lib.nix { lib = nixpkgs.lib; };
+
+    # Output: devShells."${system}".default
+    # Run: `nix devlop` or `nix-shell` to enter the dev shell.
+    # Then you can use `task` and `git` to peform the installation.
+    devShells = utils.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        default = import ./shell.nix { inherit pkgs; };
+      });
+
     genSpecialArgs = system:
       inputs
       // {
@@ -39,6 +51,8 @@
         };
       };
   in {
+    inherit devShells;
+
     nixosConfigurations = {
       # desktop vm (vmware) for test.
       red-yuanchun =

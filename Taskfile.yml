@@ -1,0 +1,114 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+    - cmd: task -l
+      silent: true
+
+  hardware-config:
+    desc: Create or update hardware-configuration.nix
+    summary: |
+      Update hardware-configuration.nix
+      This will use current system as root to generate config, you must use install:hardware-config
+      Args:
+        HOST: folder name of host under path `hosts/nixos`
+        EXTRA_ARGS: extra args for nixos-generate-config
+    dir: '{{.TASKFILE_DIR}}'
+    internal: true
+    preconditions:
+      - sh: test -d hosts/nixos/{{.HOST}}
+        msg: "Dir of host: `hosts/nixos/{{.HOST}}` does not exist."
+    cmds:
+    - "nixos-generate-config --dir hosts/nixos/{{.HOST}} {{.EXTRA_ARGS}}"
+    # nixos-generate-config also generates configuration.nix, just delete it.
+    - cmd: rm hosts/nixos/{{.HOST}}/configuration.nix
+      silent: true
+      ignore_error: true
+
+  install:hardware-config:
+    desc: Create or update hardware-configuration.nix during installation of nixos.
+    summary: |
+      Create or update hardware-configuration.nix
+      This will use /mnt as root to generate config, you must use update:hardware-config after installation.
+      Args:
+        HOST: folder name of host under path `hosts/nixos`
+    cmds:
+    - task: hardware-config
+      vars:
+        EXTRA_ARGS: --root /mnt # root dir of nixos during installation.
+
+  update:hardware-config:
+    desc: Create or update hardware-configuration.nix after installation of nixos.
+    summary: |
+      Create or update hardware-configuration.nix
+      This will use /mnt as root to generate config, you must use install:hardware-config during installation of nixos.
+      Args:
+        HOST: folder name of host under path `hosts/nixos`
+    cmds:
+    - task: hardware-config
+
+  disk:danger:
+    prompt: This will erase all data under device `{{.DISK}}`, continue?
+    internal: true
+
+  disk:red-yuanchun:
+    desc: Partition and formatting the disk, and mount for installation.
+    summary: |
+      This will first partition the disk, then format it, finally mount them all for installation.
+      Args:
+        DISK: The disk for installing nixos.
+              Default: /dev/sda
+    vars:
+      DISK: '{{default "/dev/sda" .DISK}}'
+    deps:
+    - task: disk:danger
+      vars:
+        DISK: '{{.DISK}}'
+    cmds:
+    - |
+      parted {{.DISK}} -- mklabel gpt\
+      && parted ${DISK} -- mkpart root ext4 512MB -8GB\
+      && parted ${DISK} -- mkpart swap linux-swap -8GB 100%\
+      && parted ${DISK} -- mkpart ESP fat32 1MB 512MB\
+      && parted ${DISK} -- set 3 esp on\
+      && mkfs.ext4 -L nixos ${DISK}1\
+      && mkswap -L swap ${DISK}2\
+      && mkfs.fat -F 32 -n boot ${DISK}3\
+      && mount /dev/disk/by-label/nixos /mnt\
+      && mkdir -p /mnt/boot\
+      && mount -o umask=077 /dev/disk/by-label/boot /mnt/boot\
+      && swapon ${DISK}2
+
+  install:nixos:
+    desc: Perform installation of nixos.
+    summary: |
+      Perform installation of nixos.
+      Args:
+        HOST: folder name of host under path `hosts/nixos`
+    deps:
+    - task: install:hardware-config
+      vars:
+        HOST: '{{.HOST}}'
+    cmds:
+    - nixos-install --option extra-substituters "https://mirror.sjtu.edu.cn/nix-channels/store" --flake .#{{.HOST}}
+
+  history:
+    desc: Show nix profile histories.
+    cmds:
+    - nix profile history --profile /nix/var/nix/profiles/system
+
+  repl:
+    desc: Enter nix repl with nixpkgs.
+    cmds:
+    - nix repl -f flake:nixpkgs
+
+  clean:
+    desc: Delete files older than 7 day, to reduce disk usage.
+    cmds:
+    - sudo nix profile wipe-history --profile /nix/var/nix/profiles/system  --older-than 7d
+
+  gc:
+    desc: GC to reduce disk usage.
+    cmds:
+    - sudo nix-collect-garbage --delete-old
