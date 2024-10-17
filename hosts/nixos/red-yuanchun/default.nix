@@ -7,20 +7,14 @@ let
   hostName = "red-yuanchun";
 in
 {
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-  # SJTUG is the best mirror
-  nix.settings.substituters = [ "https://mirror.sjtu.edu.cn/nix-channels/store" ];
-
-  nixpkgs.config.allowUnfree = true;
-
-  # Vmware tools, for vmware guest ONLY
-  virtualisation.vmware.guest.enable = true;
-
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
+    ../nixos-base.nix
   ];
+
+  # Vmware tools, for vmware guest ONLY
+  virtualisation.vmware.guest.enable = true;
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;

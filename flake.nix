@@ -1,6 +1,15 @@
 {
   description = "NixOS configs";
 
+  # the nixConfig here only affects the flake itself, not the system configuration!
+  nixConfig = {
+    # Only useful for first time, you may config system wild substituter after installation.
+    # Uncomment below lines for first time installing in china.
+    # extra-substituters = [
+    #   "https://mirror.sjtu.edu.cn/nix-channels/store"
+    # ];
+  };
+
   inputs = {
     # Official NixOS package source, using nixos's unstable branch by default
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
