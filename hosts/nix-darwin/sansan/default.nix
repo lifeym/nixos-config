@@ -16,9 +16,7 @@
     dua
     fzf
     gnumake
-    # see: https://github.com/NixOS/nixpkgs/issues/348309
-    # has not fixed yet(unstable)
-    # go-task
+    go-task
     hledger
     htop
     neovim
@@ -66,10 +64,6 @@
     minikube
     tektoncd-cli
   ] ++ (with pkgs-stable; [
-    # see: https://github.com/NixOS/nixpkgs/issues/348309
-    # has not fixed yet(unstable)
-    # use stable version instead
-    go-task
     mycli
   ]);
 

@@ -21,5 +21,21 @@ disk-red-yuanchun:
 		&& swapon ${DISK_MAIN}2
 
 .PHONY: install-%
-install-%:
+install-nixos-%: hardware-config-nixos-%
 	nixos-install --option substituters "https://mirror.sjtu.edu.cn/nix-channels/store" --flake .#$*
+
+.PHONY: history
+history:
+	nix profile history --profile /nix/var/nix/profiles/system
+
+.PHONY: repl
+repl:
+	nix repl -f flake:nixpkgs
+
+.PHONY: clean
+clean:
+	sudo nix profile wipe-history --profile /nix/var/nix/profiles/system  --older-than 7d
+
+.PHONY: gc
+gc:
+	sudo nix-collect-garbage --delete-old

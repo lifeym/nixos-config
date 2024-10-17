@@ -84,14 +84,13 @@ in
     git
     gnumake
     go-task
+    nerdfonts
     ripgrep
     termscp
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wezterm
     wget
-  ] ++ [
-    pkgs-stable.go-task
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
