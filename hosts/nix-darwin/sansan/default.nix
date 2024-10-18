@@ -51,6 +51,7 @@
     gitui
     jq
     nixd
+    nixfmt-rfc-style
     yq
 
     ###

@@ -1,5 +1,5 @@
 {
-  lib
+  lib,
 }:
 let
   darwinSystems = [
@@ -14,9 +14,11 @@ let
   eachDefaultSystem = lib.genAttrs defaultSystems;
   eachDefaultDarwin = lib.genAttrs darwinSystems;
   eachDefaultLinux = lib.genAttrs linuxSystems;
-in {
+in
+{
   inherit
     eachDefaultSystem
     eachDefaultDarwin
-    eachDefaultLinux;
+    eachDefaultLinux
+    ;
 }

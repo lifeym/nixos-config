@@ -9,7 +9,10 @@
   };
 
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
 
     # SJTUG contains not only nixos, but also nix-darwin caches
     substituters = [ "https://mirror.sjtu.edu.cn/nix-channels/store" ];
