@@ -56,8 +56,13 @@
 
     ###
 
+    # dbcli
+    pgcli
+    litecli
+
     # k8s tools
     argocd
+    fly # concourse cil
     k9s
     kubectl
     kubeseal
