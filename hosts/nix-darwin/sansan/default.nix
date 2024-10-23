@@ -24,6 +24,7 @@
     nushell
     p7zip
     rclone
+    restic # backup tool
     ripgrep
     termscp
     thefuck
@@ -57,8 +58,9 @@
     ###
 
     # dbcli
-    pgcli
     litecli
+    mycli
+    pgcli
 
     # k8s tools
     argocd
@@ -70,7 +72,7 @@
     minikube
     tektoncd-cli
   ] ++ (with pkgs-stable; [
-    mycli
+    # mycli
   ]);
 
   homebrew.enable = true;
