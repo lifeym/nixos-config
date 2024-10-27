@@ -1,4 +1,9 @@
-{ pkgs, pkgs-stable, lib, ... }:
+{
+  pkgs,
+  pkgs-stable,
+  lib,
+  ...
+}:
 
 {
   imports = [
@@ -26,6 +31,8 @@
     rclone
     restic # backup tool
     ripgrep
+    shellcheck
+    starship
     termscp
     thefuck
     tmux
@@ -71,15 +78,11 @@
     kustomize
     minikube
     tektoncd-cli
-  ] ++ (with pkgs-stable; [
-    # mycli
-  ]);
+  ];
 
   homebrew.enable = true;
   homebrew.taps = [
     "homebrew/bundle"
-    # "homebrew/cask-fonts"
-    # "homebrew/cask-versions"
     "homebrew/services"
     "wez/wezterm"
   ];
@@ -95,7 +98,6 @@
     "mysqlworkbench"
     "qbittorrent"
     "qq"
-    "font-sarasa-gothic"
     "syncthing"
     "vagrant"
     "vagrant-vmware-utility"
@@ -105,6 +107,7 @@
 
   environment.variables = {
     EDITOR = "vim";
+    XDG_CONFIG_HOME = "$HOME/.config";
     VIFM = "$HOME/.config/vifm";
   };
 
@@ -117,7 +120,15 @@
   nix.linux-builder.enable = true;
 
   # Create /etc/zshrc that loads the nix-darwin environment.
-  programs.zsh.enable = true;  # default shell on catalina
+  programs = {
+    zsh.enable = true; # default shell on catalina
+    nix-index.enable = true;
+  };
+
+  fonts.packages = with pkgs; [
+    (nerdfonts.override { fonts = [ "Meslo" "IBMPlexMono" ]; })
+    sarasa-gothic
+  ];
 
   # Set Git commit hash for darwin-version.
   # system.configurationRevision = self.rev or self.dirtyRev or null;
