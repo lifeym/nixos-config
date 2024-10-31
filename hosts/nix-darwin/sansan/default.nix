@@ -18,6 +18,7 @@
     # utilities
     bat
     chezmoi
+    clipboard-jh # nice cipboard cli
     dua
     fzf
     gnumake
