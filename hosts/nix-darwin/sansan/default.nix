@@ -54,6 +54,7 @@
 
     # develop tools
     direnv
+    difftastic # nice external diff not only for git
     gh
     git
     git-credential-manager
@@ -72,7 +73,6 @@
 
     # k8s tools
     argocd
-    fly # concourse cil
     k9s
     kubectl
     kubeseal
@@ -114,7 +114,7 @@
 
   # DO NOT use services.nix-daemon.enabled = true,
   # if nix was installed by a installer(eg: determinate nix-installer).
-  nix.useDaemon = true;
+  # nix.useDaemon = true;
   # nix.package = pkgs.nix;
 
   # Nix linux-builder settings.
@@ -127,7 +127,9 @@
   };
 
   fonts.packages = with pkgs; [
-    (nerdfonts.override { fonts = [ "Meslo" "IBMPlexMono" ]; })
+    nerd-fonts.meslo-lg
+    nerd-fonts.blex-mono
+    # nerd-fonts.IBMPlexMono
     sarasa-gothic
   ];
 

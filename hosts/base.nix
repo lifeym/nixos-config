@@ -20,6 +20,7 @@
     # Optimize storage
     # See also:
     # https://nixos.org/manual/nix/stable/command-ref/conf-file.html#conf-auto-optimise-store
-    auto-optimise-store = lib.mkDefault true;
+    # `nix.settings.auto-optimise-store` is known to corrupt the Nix Store, nix-darwin use `nix.optimise.automatic` instead.
+    # auto-optimise-store = lib.mkDefault true;
   };
 }

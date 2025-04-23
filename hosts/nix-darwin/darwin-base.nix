@@ -7,4 +7,5 @@
 
   nix.settings.bash-prompt-prefix = lib.mkDefault "(nix:$name)\\040";
   nix.settings.trusted-users = [ "@admin" ];
+  nix.optimise.automatic = true;
 }
