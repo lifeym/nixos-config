@@ -5,9 +5,9 @@
   nixConfig = {
     # Only useful for first time, you may config system wild substituter after installation.
     # Uncomment below lines for first time installing in china.
-    # extra-substituters = [
-    #   "https://mirror.sjtu.edu.cn/nix-channels/store"
-    # ];
+    #extra-substituters = [
+    #  "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
+    #];
   };
 
   inputs = {
@@ -66,6 +66,19 @@
       inherit devShells;
 
       nixosConfigurations = {
+        # my home lab server.
+        red-daiyu =
+          let
+            system = "x86_64-linux";
+          in
+          nixpkgs-stable.lib.nixosSystem {
+            inherit system;
+            specialArgs = genSpecialArgs system;
+            modules = [
+              ./hosts/nixos/red-daiyu
+            ];
+          };
+
         # desktop vm (vmware) for test.
         red-yuanchun =
           let
