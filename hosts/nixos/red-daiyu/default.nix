@@ -28,17 +28,38 @@ in
   # load tcp_bbr module for enabling bbr in sysctl.
   boot.kernelModules = [ "tcp_bbr" ];
 
-  boot.swraid = {
+  # Nested virtualization for kvm
+  boot.extraModprobeConfig = "options kvm_amd nested=1";
+
+  # Enable libvirt daemon
+  virtualisation.libvirtd = {
     enable = true;
-    mdadmConf = ''
-    ARRAY /dev/md/openSUSE:1 metadata=1.2 UUID=890c5d74:2a8b8f7f:01c80f44:f4ed2786
-    '';
+    qemu = {
+      package = pkgs.qemu_kvm;
+      runAsRoot = true;
+      swtpm.enable = true;
+      ovmf = {
+        enable = true;
+        packages = [(pkgs.OVMF.override {
+          secureBoot = true;
+          tpmSupport = true;
+        }).fd];
+      };
+    };
   };
 
   boot.kernel.sysctl = {
     # using bbr
     "net.core.default_qdisc" = "fq";
     "net.ipv4.tcp_congestion_control" = "bbr";
+  };
+
+  # File systems
+  boot.swraid = {
+    enable = true;
+    mdadmConf = ''
+    ARRAY /dev/md/openSUSE:1 metadata=1.2 UUID=890c5d74:2a8b8f7f:01c80f44:f4ed2786
+    '';
   };
 
   services.lvm.boot.thin.enable = true; # when using thin provisioning or caching
@@ -76,8 +97,8 @@ in
   time.timeZone = "Asia/Shanghai";
 
   # Configure network proxy if necessary
-  #networking.proxy.default = "192.168.0.6:10809";
-  #networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+  networking.proxy.default = "192.168.0.6:10809";
+  networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain,local,baidu.com,edu.cn";
 
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
@@ -164,10 +185,6 @@ in
   services.openssh.enable = true;
   services.sshd.enable = true;
 
-  # v2ray systemd service
-  #systemd.service.v2ray = {
-  #};
-
   # Open ports in the firewall.
   networking.firewall = {
     enable = true;
@@ -178,6 +195,15 @@ in
       10809
     ];
     # allowedUDPPorts = [ ... ];
+  };
+
+  # v2ray systemd service
+  systemd.services.v2ray = {
+    description = "V2ray service";
+    path = [ pkgs-unstable.v2ray ];
+    requires = [ "network.target" "mnt-data.mount" ];
+    after = [ "network.target" "mnt-data.mount" ];
+    script = "v2ray run -c /mnt/data/lib/v2fly/config.json";
   };
 
   # Copy the NixOS configuration file and link it from the resulting system
