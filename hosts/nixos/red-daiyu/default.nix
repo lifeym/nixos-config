@@ -32,6 +32,7 @@ in
   boot.extraModprobeConfig = "options kvm_amd nested=1";
 
   # Enable libvirt daemon
+  # See: https://nixos.wiki/wiki/Libvirt
   virtualisation.libvirtd = {
     enable = true;
     qemu = {
@@ -55,6 +56,9 @@ in
   };
 
   # File systems
+
+  # mdadm raid
+  # Or use environment.etc."mdadm.conf" instead.
   boot.swraid = {
     enable = true;
     mdadmConf = ''
@@ -184,6 +188,69 @@ in
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
   services.sshd.enable = true;
+
+  # Samba
+  # See: https://nixos.wiki/wiki/Samba
+  # SeeAlso: smb.conf man (https://www.samba.org/samba/docs/current/man-html/smb.conf.5)
+  services.samba = {
+    enable = true;
+    securityType = "user";
+    openFirewall = true;
+    settings = {
+      global = {
+        "workgroup" = "WORKGROUP";
+        "server string" = "Lifeym's Home Lab Samba Server";
+        "netbios name" = "smbnix";
+        "security" = "user";
+        "use sendfile" = "yes";
+        "hosts allow" = "192.168.0. 127.0.0.1 localhost";
+        "hosts deny" = "0.0.0.0/0";
+        "guest account" = "nobody";
+        "map to guest" = "bad user";
+        "passdb backend" = "tdbsam:/mnt/data/lib/samba/private/passdb.tdb"; # TDB based password storage backend
+      };
+      "downloads" = {
+        "path" = "/mnt/downloads";
+        "browseable" = "yes";
+        "read only" = "yes";
+        "guest ok" = "yes";
+        # "create mask" = "0644";
+        # "directory mask" = "0755";
+        # "force user" = "username";
+        # "force group" = "groupname";
+      };
+      # "private" = {
+      #   "path" = "/mnt/Shares/Private";
+      #   "browseable" = "yes";
+      #   "read only" = "no";
+      #   "guest ok" = "no";
+      #   "create mask" = "0644";
+      #   "directory mask" = "0755";
+      #   "force user" = "username";
+      #   "force group" = "groupname";
+      # };
+
+      # Apple Time Machine
+      "tm_share" = {
+          "path" = "/mnt/data/lib/samba/tm_share";
+          "valid users" = "lifeym";
+          "public" = "no";
+          "writeable" = "yes";
+          # "force user" = "username";
+          "fruit:aapl" = "yes";
+          "fruit:time machine" = "yes";
+          "vfs objects" = "catia fruit streams_xattr";
+      };
+    };
+  };
+
+  # Enable Web Services Dynamic Discovery host daemon.
+  # This enables (Samba) hosts, like your local NAS device,
+  #   to be found by Web Service Discovery Clients like Windows.
+  services.samba-wsdd = {
+    enable = true;
+    openFirewall = true;
+  };
 
   # Open ports in the firewall.
   networking.firewall = {
