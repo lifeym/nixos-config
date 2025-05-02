@@ -94,15 +94,55 @@ in
 
   networking = {
     inherit hostName;
-    networkmanager.enable = true; # Easiest to use and most distros use this by default.
+
+    # Configure network proxy if necessary
+    proxy.default = "192.168.0.6:10809";
+    proxy.noProxy = "127.0.0.1,localhost,internal.domain,local,baidu.com,edu.cn";
+  };
+
+  # Use systemd-networkd to manage networks static settings.
+  networking.useDHCP = false; # hardware-configuration.nix enabled this, disable it! then we can use systemd-network.
+  systemd.network = {
+    enable = true;
+    netdevs = {
+       # Create the bridge interface
+       "20-br0" = {
+         netdevConfig = {
+           Kind = "bridge";
+           Name = "br0";
+         };
+       };
+    };
+    networks = {
+      "20-dhcp-br0" = {
+        matchConfig.Name = "br0";
+        networkConfig = {
+          DHCP = "yes";
+        };
+      };
+
+      # Connect the bridge ports to the bridge
+      "30-enp11s0" = {
+        matchConfig.Name = "enp11s0";
+        networkConfig.Bridge = "br0";
+        linkConfig.RequiredForOnline = "enslaved";
+      };
+
+      # Configure the bridge for its desired function
+      "40-br0" = {
+        matchConfig.Name = "br0";
+        bridgeConfig = {};
+        linkConfig = {
+          # or "routable" with IP addresses configured
+          # RequiredForOnline = "carrier";
+          RequiredForOnline = "routable";
+        };
+      };
+    };
   };
 
   # Set your time zone.
   time.timeZone = "Asia/Shanghai";
-
-  # Configure network proxy if necessary
-  networking.proxy.default = "192.168.0.6:10809";
-  networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain,local,baidu.com,edu.cn";
 
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
@@ -122,8 +162,12 @@ in
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
     isNormalUser = true;
-    extraGroups = [ "networkmanager" "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
     packages = with pkgs; [];
+  };
+
+  users.users.minidlna = {
+    extraGroups = [ "users" ]; # so minidlna can access the files.
   };
 
   # List packages installed in system profile. To search, run:
@@ -194,7 +238,6 @@ in
   # SeeAlso: smb.conf man (https://www.samba.org/samba/docs/current/man-html/smb.conf.5)
   services.samba = {
     enable = true;
-    securityType = "user";
     openFirewall = true;
     settings = {
       global = {
@@ -252,6 +295,20 @@ in
     openFirewall = true;
   };
 
+  services.minidlna = {
+    enable = true;
+    settings = {
+      friendly_name = "red-daiyu";
+      inotify = "yes"; # enable inotify monitoring to automatically discover new files.
+      log_level = "error"; # reduce disk io and usage.
+      media_dir = [
+        "V,/mnt/store/media"
+        "V,/mnt/downloads"
+      ];
+    };
+    openFirewall = true;
+  };
+
   # Open ports in the firewall.
   networking.firewall = {
     enable = true;
@@ -268,9 +325,13 @@ in
   systemd.services.v2ray = {
     description = "V2ray service";
     path = [ pkgs-unstable.v2ray ];
-    requires = [ "network.target" "mnt-data.mount" ];
+    requires = [
+      "network-online.target" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
+      "mnt-data.mount"
+    ];
     after = [ "network.target" "mnt-data.mount" ];
     script = "v2ray run -c /mnt/data/lib/v2fly/config.json";
+    wantedBy = [ "multi-user.target" ]; # starting a unit by default at boot time
   };
 
   # Copy the NixOS configuration file and link it from the resulting system
@@ -296,5 +357,4 @@ in
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
   system.stateVersion = "24.11"; # Did you read the comment?
-
 }
