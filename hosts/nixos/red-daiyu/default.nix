@@ -309,6 +309,68 @@ in
     openFirewall = true;
   };
 
+  services.k3s = {
+    enable = true;
+    role = "server";
+    #package = pkgs-unstable.k3s_1_31; # Package to use, when updating, to follow k8s version skrew.
+    extraFlags = [
+    # "--debug" # Optionally add additional args to k3s
+      "--flannel-backend none"
+      "--cluster-cidr=10.42.0.0/16"
+      "--cluster-domain=cluster.local"
+      "--tls-san 192.168.0.6 cluster.local"
+      "--disable traefik servicelb"
+      "--disable-network-policy"
+      "--embedded-registry"
+      "--write-kubeconfig-mode 644"
+      "--token symphony"
+    ];
+  };
+
+  services.nfs.server = {
+    enable = true;
+    exports = ''
+    # /export         192.168.1.10(rw,fsid=0,no_subtree_check) 192.168.1.15(rw,fsid=0,no_subtree_check)
+    /mnt/data/nfs/k8s/mysql8 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+    /mnt/data/nfs/k8s/postgres15 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+    /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+    /mnt/data/nfs/k8s/gitea 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+    '';
+  };
+
+  # k3s default private registry file
+  # See: https://docs.k3s.io/cli/server
+  environment.etc."rancher/k3s/registries.yaml".text = ''
+  mirrors:
+    docker.elastic.co:
+      endpoint:
+        - "https://elastic.m.daocloud.io"
+    docker.io:
+      endpoint:
+        - "https://docker.m.daocloud.io"
+    gcr.io:
+      endpoint:
+        - "https://gcr.m.daocloud.io"
+    ghcr.io:
+      endpoint:
+        - "https://ghcr.m.daocloud.io"
+    k8s.gcr.io:
+      endpoint:
+        - "https://k8s-gcr.m.daocloud.io"
+    registry.k8s.io:
+      endpoint:
+        - "https://k8s.m.daocloud.io"
+    mcr.microsoft.com:
+      endpoint:
+        - "https://mcr.m.daocloud.io"
+    nvcr.io:
+      endpoint:
+        - "https://nvcr.m.daocloud.io"
+    quay.io:
+      endpoint:
+        - "https://quay.m.daocloud.io"
+  '';
+
   # Open ports in the firewall.
   networking.firewall = {
     enable = true;
@@ -316,7 +378,9 @@ in
       22
       80
       443
-      10809
+      2049 # nfs v4
+      6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
+      10809 # v2ray
     ];
     # allowedUDPPorts = [ ... ];
   };
@@ -326,10 +390,15 @@ in
     description = "V2ray service";
     path = [ pkgs-unstable.v2ray ];
     requires = [
+      "network.target" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
       "network-online.target" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
       "mnt-data.mount"
     ];
-    after = [ "network.target" "mnt-data.mount" ];
+    after = [
+      "network.target"
+      "network-online.target"
+      "mnt-data.mount"
+    ];
     script = "v2ray run -c /mnt/data/lib/v2fly/config.json";
     wantedBy = [ "multi-user.target" ]; # starting a unit by default at boot time
   };

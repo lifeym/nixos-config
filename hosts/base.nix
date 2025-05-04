@@ -15,11 +15,11 @@
     ];
 
     # SJTUG contains not only nixos, but also nix-darwin caches
-    substituters = [ 
+    substituters = [
       "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
-      "https://mirrors.ustc.edu.cn/nix-channels/store"
       "https://mirror.iscas.ac.cn/nix-channels/store"
-      #"https://mirror.sjtu.edu.cn/nix-channels/store"
+      "https://mirrors.ustc.edu.cn/nix-channels/store"
+      # "https://mirror.sjtu.edu.cn/nix-channels/store"
     ];
 
     # Optimize storage
@@ -28,4 +28,6 @@
     # `nix.settings.auto-optimise-store` is known to corrupt the Nix Store, nix-darwin use `nix.optimise.automatic` instead.
     # auto-optimise-store = lib.mkDefault true;
   };
+
+  nix.optimise.automatic = lib.mkDefault true;
 }
