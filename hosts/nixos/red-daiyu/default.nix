@@ -12,6 +12,11 @@
 }:
 let
   hostName = "red-daiyu";
+  proxyCfg = {
+    httpProxy = "192.168.0.6:10809";
+    port = 10809;
+    noProxy = "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
+  };
 in
 {
   imports = [
@@ -96,8 +101,8 @@ in
     inherit hostName;
 
     # Configure network proxy if necessary
-    proxy.default = "192.168.0.6:10809";
-    proxy.noProxy = "127.0.0.1,localhost,internal.domain,local,baidu.com,edu.cn";
+    proxy.default = proxyCfg.httpProxy;
+    proxy.noProxy = proxyCfg.noProxy; #"localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
 
   # Use systemd-networkd to manage networks static settings.
@@ -325,12 +330,12 @@ in
       "--write-kubeconfig-mode 644"
       "--token symphony"
     ];
+    environmentFile = "/etc/rancher/k3s/k3s.service.env";
   };
 
   services.nfs.server = {
     enable = true;
     exports = ''
-    # /export         192.168.1.10(rw,fsid=0,no_subtree_check) 192.168.1.15(rw,fsid=0,no_subtree_check)
     /mnt/data/nfs/k8s/mysql8 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     /mnt/data/nfs/k8s/postgres15 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
@@ -338,7 +343,7 @@ in
     '';
   };
 
-  # k3s default private registry file
+  # K3s default private registry file
   # See: https://docs.k3s.io/cli/server
   environment.etc."rancher/k3s/registries.yaml".text = ''
   mirrors:
@@ -371,6 +376,14 @@ in
         - "https://quay.m.daocloud.io"
   '';
 
+  # K3s environment file
+  # See: https://docs.k3s.io/advanced#configuring-an-http-proxy
+  environment.etc."rancher/k3s/k3s.service.env".text = ''
+  CONTAINERD_HTTP_PROXY=${proxyCfg.httpProxy}
+  CONTAINERD_HTTPS_PROXY=${proxyCfg.httpProxy}
+  CONTAINERD_NO_PROXY=${proxyCfg.noProxy}
+  '';
+
   # Open ports in the firewall.
   networking.firewall = {
     enable = true;
@@ -380,7 +393,7 @@ in
       443
       2049 # nfs v4
       6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
-      10809 # v2ray
+      proxyCfg.port # v2ray
     ];
     # allowedUDPPorts = [ ... ];
   };
