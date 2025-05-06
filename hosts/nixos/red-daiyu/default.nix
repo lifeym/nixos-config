@@ -23,6 +23,7 @@ in
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ../nixos-base.nix
+    ../docker-rootless.nix
   ];
 
   boot.initrd.kernelModules = [
@@ -168,6 +169,10 @@ in
   users.users.lifeym = {
     isNormalUser = true;
     extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+
+    # To keep user service to stay running after a user logs out.
+    # See: https://wiki.nixos.org/wiki/Systemd/User_Services
+    linger = true;
     packages = with pkgs; [];
   };
 
