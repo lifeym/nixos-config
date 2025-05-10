@@ -145,5 +145,5 @@
   system.defaults.dock.show-recents = false;
   system.defaults.dock.autohide = true;
 
-  security.pam.enableSudoTouchIdAuth = true;
+  security.pam.services.sudo_local.touchIdAuth = true;
 }
