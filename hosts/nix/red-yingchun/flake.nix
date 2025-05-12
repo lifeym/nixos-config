@@ -4,16 +4,29 @@
   inputs = {
     # Specify the source of Home Manager and Nixpkgs.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable-small";
+    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-24.11-small";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { nixpkgs, home-manager, ... }:
+  outputs = { nixpkgs, home-manager, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      genSpecialArgs =
+        system:
+        inputs
+        // {
+          pkgs-unstable = import inputs.nixpkgs-unstable {
+            inherit system;
+          };
+          pkgs-stable = import inputs.nixpkgs-stable {
+            inherit system;
+          };
+      };
     in {
       homeConfigurations."leonardo" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
@@ -24,6 +37,7 @@
 
         # Optionally use extraSpecialArgs
         # to pass through arguments to home.nix
+        extraSpecialArgs = genSpecialArgs system;
       };
     };
 }
