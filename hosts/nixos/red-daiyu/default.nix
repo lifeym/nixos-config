@@ -399,7 +399,7 @@ in
       2049 # nfs v4
       6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
       proxyCfg.port # v2ray
-    ];
+    ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
     # allowedUDPPorts = [ ... ];
   };
 
