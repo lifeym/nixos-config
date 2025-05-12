@@ -168,7 +168,7 @@ in
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
     isNormalUser = true;
-    extraGroups = [ "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "wheel" "libvirtd" ]; # Enable ‘sudo’ for the user.
 
     # To keep user service to stay running after a user logs out.
     # See: https://wiki.nixos.org/wiki/Systemd/User_Services
