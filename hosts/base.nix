@@ -30,4 +30,5 @@
   };
 
   nix.optimise.automatic = lib.mkDefault true;
+  nixpkgs.config.allowUnfree = true;
 }

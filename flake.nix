@@ -82,6 +82,19 @@
             ];
           };
 
+        # desktop kvm vm for work.
+        red-baochai =
+          let
+            system = "x86_64-linux";
+          in
+          nixpkgs-stable.lib.nixosSystem {
+            inherit system;
+            specialArgs = genSpecialArgs system;
+            modules = [
+              ./hosts/nixos/red-baochai
+            ];
+          };
+
         # desktop vm (vmware) for test.
         red-yuanchun =
           let
