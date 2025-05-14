@@ -82,25 +82,25 @@ in
 
   services.lvm.boot.thin.enable = true; # when using thin provisioning or caching
 
-  # fileSystems."/mnt/data" = {
-  #   device = "/dev/disk/by-uuid/9734a151-32f3-4986-ba99-d560d4bb572b";
-  #   fsType = "xfs";
-  # };
+  fileSystems."/mnt/data" = {
+    device = "/dev/disk/by-uuid/9734a151-32f3-4986-ba99-d560d4bb572b";
+    fsType = "xfs";
+  };
 
-  # fileSystems."/mnt/store" = {
-  #   device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
-  #   fsType = "xfs";
-  # };
+  fileSystems."/mnt/store" = {
+    device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
+    fsType = "xfs";
+  };
 
-  # fileSystems."/mnt/downloads" = {
-  #   device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
-  #   fsType = "xfs";
-  # };
+  fileSystems."/mnt/downloads" = {
+    device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
+    fsType = "xfs";
+  };
 
-  # fileSystems."/mnt/fast" = {
-  #   device = "/dev/disk/by-uuid/2ae126bf-962e-4a4c-b292-f60e65e9eec5";
-  #   fsType = "ext4";
-  # };
+  fileSystems."/mnt/fast" = {
+    device = "/dev/disk/by-uuid/2ae126bf-962e-4a4c-b292-f60e65e9eec5";
+    fsType = "ext4";
+  };
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;

@@ -8,7 +8,7 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  boot.initrd.availableKernelModules = [ "nvme" "ahci" "xhci_pci" "sd_mod" ];
+  boot.initrd.availableKernelModules = [ "nvme" "ahci" "xhci_pci" "usbhid" "usb_storage" "sd_mod" ];
   boot.initrd.kernelModules = [ "dm-snapshot" ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
@@ -24,26 +24,6 @@
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
-  fileSystems."/mnt/fast" =
-    { device = "/dev/disk/by-uuid/2ae126bf-962e-4a4c-b292-f60e65e9eec5";
-      fsType = "ext4";
-    };
-
-  fileSystems."/mnt/data" =
-    { device = "/dev/disk/by-uuid/9734a151-32f3-4986-ba99-d560d4bb572b";
-      fsType = "xfs";
-    };
-
-  fileSystems."/mnt/downloads" =
-    { device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
-      fsType = "xfs";
-    };
-
-  fileSystems."/mnt/store" =
-    { device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
-      fsType = "xfs";
-    };
-
   swapDevices =
     [ { device = "/dev/disk/by-uuid/27e2c8e6-fc0b-406b-a406-2d42adc1a0ab"; }
     ];
@@ -53,10 +33,7 @@
   # still possible to use this option, but it's recommended to use it in conjunction
   # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
   networking.useDHCP = lib.mkDefault true;
-  # networking.interfaces.br0.useDHCP = lib.mkDefault true;
   # networking.interfaces.enp11s0.useDHCP = lib.mkDefault true;
-  # networking.interfaces.vnet1.useDHCP = lib.mkDefault true;
-  # networking.interfaces.vxlan.calico.useDHCP = lib.mkDefault true;
   # networking.interfaces.wlp12s0.useDHCP = lib.mkDefault true;
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
