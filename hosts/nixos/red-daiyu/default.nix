@@ -26,6 +26,14 @@ in
     ../docker-rootless.nix
   ];
 
+  # Enable OpenGL
+  # See: https://wiki.nixos.org/wiki/AMD_GPU
+  # See: https://wiki.nixos.org/wiki/Graphics#OpenGL
+  # hardware.graphics = {
+  #   enable = true;
+  #   enable32Bit = true;
+  # };
+
   boot.initrd.kernelModules = [
     "dm-snapshot"
     "dm-cache-default" # when using volumes set up with lvmcache
@@ -74,25 +82,25 @@ in
 
   services.lvm.boot.thin.enable = true; # when using thin provisioning or caching
 
-  fileSystems."/mnt/data" = {
-    device = "/dev/disk/by-uuid/9734a151-32f3-4986-ba99-d560d4bb572b";
-    fsType = "xfs";
-  };
+  # fileSystems."/mnt/data" = {
+  #   device = "/dev/disk/by-uuid/9734a151-32f3-4986-ba99-d560d4bb572b";
+  #   fsType = "xfs";
+  # };
 
-  fileSystems."/mnt/store" = {
-    device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
-    fsType = "xfs";
-  };
+  # fileSystems."/mnt/store" = {
+  #   device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
+  #   fsType = "xfs";
+  # };
 
-  fileSystems."/mnt/downloads" = {
-    device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
-    fsType = "xfs";
-  };
+  # fileSystems."/mnt/downloads" = {
+  #   device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
+  #   fsType = "xfs";
+  # };
 
-  fileSystems."/mnt/fast" = {
-    device = "/dev/disk/by-uuid/2ae126bf-962e-4a4c-b292-f60e65e9eec5";
-    fsType = "ext4";
-  };
+  # fileSystems."/mnt/fast" = {
+  #   device = "/dev/disk/by-uuid/2ae126bf-962e-4a4c-b292-f60e65e9eec5";
+  #   fsType = "ext4";
+  # };
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
@@ -153,22 +161,14 @@ in
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
 
-  # Enable sound.
-  #hardware.pulseaudio.enable = true;
-  # OR
-  # services.pipewire = {
-  #   enable = true;
-  #   pulse.enable = true;
-  # };
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.libinput.enable = true;
-
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "libvirtd" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [
+      "wheel" # Enable ‘sudo’ for the user.
+      "libvirtd" # So this user can be used for connecting libvirt
+    ];
 
     # To keep user service to stay running after a user logs out.
     # See: https://wiki.nixos.org/wiki/Systemd/User_Services
@@ -177,7 +177,7 @@ in
   };
 
   users.users.minidlna = {
-    extraGroups = [ "users" ]; # so minidlna can access the files.
+    extraGroups = [ "users" ]; # So minidlna can access the files.
   };
 
   # List packages installed in system profile. To search, run:
@@ -204,6 +204,7 @@ in
     tmux
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    wget # curl sometimes failed to download files, wget come to help.
     zoxide
 
     # develop tools
@@ -346,6 +347,12 @@ in
     /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     /mnt/data/nfs/k8s/gitea 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     '';
+  };
+
+  services.rustdesk-server = {
+    enable = true;
+    signal.relayHosts = [ "192.168.0.6" ];
+    openFirewall = true;
   };
 
   # K3s default private registry file
