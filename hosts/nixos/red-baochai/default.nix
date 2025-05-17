@@ -53,17 +53,17 @@ in
 
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
-  # i18n.extraLocaleSettings = {
-  #   LC_ADDRESS = "zh_CN.UTF-8";
-  #   LC_IDENTIFICATION = "zh_CN.UTF-8";
-  #   LC_MEASUREMENT = "zh_CN.UTF-8";
-  #   LC_MONETARY = "zh_CN.UTF-8";
-  #   LC_NAME = "zh_CN.UTF-8";
-  #   LC_NUMERIC = "zh_CN.UTF-8";
-  #   LC_PAPER = "zh_CN.UTF-8";
-  #   LC_TELEPHONE = "zh_CN.UTF-8";
-  #   LC_TIME = "zh_CN.UTF-8";
-  # };
+  i18n.extraLocaleSettings = {
+    LC_ADDRESS = "zh_CN.UTF-8";
+    LC_IDENTIFICATION = "zh_CN.UTF-8";
+    LC_MEASUREMENT = "zh_CN.UTF-8";
+    LC_MONETARY = "zh_CN.UTF-8";
+    LC_NAME = "zh_CN.UTF-8";
+    LC_NUMERIC = "zh_CN.UTF-8";
+    LC_PAPER = "zh_CN.UTF-8";
+    LC_TELEPHONE = "zh_CN.UTF-8";
+    LC_TIME = "zh_CN.UTF-8";
+  };
 
   # Enable sound.
   #hardware.pulseaudio.enable = true;
@@ -89,12 +89,6 @@ in
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
   };
 
 
@@ -114,7 +108,9 @@ in
       kdePackages.ghostwriter
       rustdesk
       thunderbird
+      wechat-uos
       vscode
+      wpsoffice-cn
     ];
   };
 
@@ -133,6 +129,7 @@ in
     go-task
     htop
     neovim
+    nixd
     nushell
     restic # backup tool
     ripgrep
@@ -148,6 +145,7 @@ in
     argocd
     direnv
     difftastic
+    ghostty
     git-credential-manager
     gitui
   ];
