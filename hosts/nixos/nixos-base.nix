@@ -6,6 +6,7 @@
   ];
 
   nix.settings.trusted-users = [ "@wheel" ];
+  nix.channel.enable = false; # Disable the NixOS channel, as we are using flakes
 
   # Limit the number of generations to keep
   boot.loader.systemd-boot.configurationLimit = lib.mkDefault 10;
@@ -18,7 +19,8 @@
   fonts.packages = with pkgs-unstable; [
     #(nerdfonts.override { fonts = [ "FiraCode" "DroidSansMono" ]; })
     nerd-fonts.meslo-lg
-    nerd-fonts.blex-mono
+    source-han-sans # 思源黑体
+    source-han-serif # 思源宋体
     sarasa-gothic
   ];
 }

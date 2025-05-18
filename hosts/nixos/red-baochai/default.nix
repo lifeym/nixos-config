@@ -65,6 +65,18 @@ in
     LC_TIME = "zh_CN.UTF-8";
   };
 
+  # Finally, we got fcitx5 to work with KDE Plasma 6.
+  i18n.inputMethod = {
+    type = "fcitx5";
+    enable = true;
+    fcitx5.waylandFrontend = true;
+    fcitx5.addons = with pkgs; [
+      kdePackages.fcitx5-qt
+      fcitx5-chinese-addons
+      fcitx5-nord # theme
+    ];
+  };
+
   # Enable sound.
   #hardware.pulseaudio.enable = true;
   # OR
@@ -105,6 +117,7 @@ in
     # See: https://wiki.nixos.org/wiki/Systemd/User_Services
     linger = true;
     packages = with pkgs-unstable; [
+      dbeaver-bin
       kdePackages.ghostwriter
       rustdesk
       thunderbird
@@ -148,6 +161,7 @@ in
     ghostty
     git-credential-manager
     gitui
+    mycli
   ];
 
   environment.variables = {
