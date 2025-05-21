@@ -344,6 +344,7 @@ in
     /mnt/data/nfs/k8s/postgres15 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     /mnt/data/nfs/k8s/gitea 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+    /mnt/data/nfs/k8s/cjf 192.168.0.6(rw,nohide,insecure,no_subtree_check)
     '';
   };
 
