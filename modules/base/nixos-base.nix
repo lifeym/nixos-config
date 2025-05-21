@@ -1,8 +1,9 @@
-{ lib, pkgs, pkgs-unstable, ... }:
+{ lib, pkgs-unstable, ... }:
 
 {
   imports = [
-    ../base.nix
+    ./base.nix
+    ./zram.nix
   ];
 
   nix.settings.trusted-users = [ "@wheel" ];

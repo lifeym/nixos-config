@@ -8,10 +8,10 @@
   pkgs,
   pkgs-stable,
   pkgs-unstable,
+  hostName,
   ...
 }:
 let
-  hostName = "red-baochai";
   proxyCfg = {
     httpProxy = "192.168.0.6:10809";
     port = 10809;
@@ -22,8 +22,6 @@ in
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ../nixos-base.nix
-    ../docker-rootless.nix
   ];
 
   # load tcp_bbr module for enabling bbr in sysctl.

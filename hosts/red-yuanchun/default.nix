@@ -7,16 +7,14 @@
   lib,
   pkgs,
   pkgs-stable,
+  hostName,
   ...
 }:
-let
-  hostName = "red-yuanchun";
-in
+
 {
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ../nixos-base.nix
   ];
 
   # Vmware tools, for vmware guest ONLY

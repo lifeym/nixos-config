@@ -1,5 +1,3 @@
-{ lib, pkgs, ... }:
-
 {
   virtualisation.docker.rootless = {
     enable = true;

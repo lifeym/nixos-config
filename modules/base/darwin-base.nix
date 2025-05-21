@@ -2,7 +2,7 @@
 
 {
   imports = [
-    ../base.nix
+    ./base.nix
   ];
 
   nix.settings.bash-prompt-prefix = lib.mkDefault "(nix:$name)\\040";
