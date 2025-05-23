@@ -97,6 +97,12 @@ rec {
         (modulesPath "base/nixos-base.nix")
       ];
 
+      wsl = [
+        (modulesPath "base/base.nix")
+        (modulesPath "base/zram.nix")
+        (modulesPath "base/nixos-wsl.nix")
+      ];
+
       # Install docker in rootless mode
       dockerRootless = [
         (modulesPath "nixos/docker-rootless.nix")

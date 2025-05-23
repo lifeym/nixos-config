@@ -23,5 +23,8 @@
     # nix-darwin
     nix-darwin.url = "github:LnL7/nix-darwin";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+
+    # nix-wsl
+    nixos-wsl.url = "github:nix-community/NixOS-WSL/main";
   };
 }
