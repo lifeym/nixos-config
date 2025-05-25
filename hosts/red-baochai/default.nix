@@ -37,6 +37,13 @@ in
   boot.loader.grub.device = "/dev/vda";
   boot.loader.grub.useOSProber = true;
 
+  boot.binfmt.emulatedSystems = [
+    "aarch64-linux"
+    "aarch64_be-linux"
+    "armv6l-linux"
+    "armv7l-linux"
+  ];
+
   networking = {
     inherit hostName;
     networkmanager.enable = true;
@@ -92,7 +99,7 @@ in
   services.printing.enable = true;
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -100,10 +107,6 @@ in
     alsa.support32Bit = true;
     pulse.enable = true;
   };
-
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.libinput.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
@@ -142,6 +145,7 @@ in
     neovim
     nixd
     nushell
+    qemu
     restic # backup tool
     ripgrep
     shellcheck

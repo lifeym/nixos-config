@@ -18,7 +18,7 @@
     # This means they update faster, but require more to be built from source.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-24.11";
+    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.05";
 
     # nix-darwin
     nix-darwin.url = "github:LnL7/nix-darwin";
