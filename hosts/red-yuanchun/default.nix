@@ -24,22 +24,32 @@
   environment.systemPackages = with pkgs; [
     chezmoi
     curl
+    direnv
     dua
     gh
     git
+    gitui
     gnumake
     go-task
+    neovim
+    nixd # nix lsp
     ripgrep
     starship
     termscp
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    wezterm
     wget
     zoxide
   ];
 
   programs.zsh.enable = true;
+
+  # For using vscode-server in NixOs, you need to enable the nix-ld feature.
+  # See: https://nixos.wiki/wiki/Visual_Studio_Code
+  # See: https://github.com/nix-community/nix-ld
+  # An alternative is to use: nix-vscode-server
+  #   See: https://github.com/nix-community/nixos-vscode-server
+  programs.nix-ld.enable = true;
 
   # List services that you want to enable:
 
