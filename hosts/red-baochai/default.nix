@@ -13,7 +13,7 @@
 }:
 let
   proxyCfg = {
-    httpProxy = "192.168.0.6:10809";
+    httpProxy = "http://192.168.0.6:10809";
     port = 10809;
     noProxy = "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
@@ -112,7 +112,7 @@ in
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
     isNormalUser = true;
-    extraGroups = [ "networkmanager" "wheel" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [ "networkmanager" "wheel" "libvirtd" ]; # Enable ‘sudo’ for the user.
 
     # To keep user service to stay running after a user logs out.
     # See: https://wiki.nixos.org/wiki/Systemd/User_Services
@@ -166,6 +166,23 @@ in
     mycli
   ];
 
+  virtualisation.libvirtd = {
+    enable = true;
+    qemu = {
+      package = pkgs.qemu;
+      runAsRoot = true;
+      swtpm.enable = true;
+      ovmf = {
+        enable = true;
+        packages = [(pkgs.OVMF.override {
+          secureBoot = true;
+          tpmSupport = true;
+        }).fd];
+      };
+    };
+  };
+  boot.extraModprobeConfig = "options kvm_amd nested=1";
+
   environment.variables = {
     EDITOR = "vim";
 
@@ -175,6 +192,7 @@ in
 
     VIFM = "$HOME/.config/vifm";
     XDG_CONFIG_HOME = "$HOME/.config";
+    VAGRANT_DEFAULT_PROVIDER="libvirt";
   };
 
   # Some programs need SUID wrappers, can be configured further or are

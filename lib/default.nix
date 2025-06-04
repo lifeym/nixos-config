@@ -93,13 +93,10 @@ rec {
   {
     nixos = { # Base modules must be included in all systems
       base = [
-        # (modulesPath "base/base.nix")
         (modulesPath "base/nixos-base.nix")
       ];
 
       wsl = [
-        (modulesPath "base/base.nix")
-        (modulesPath "base/zram.nix")
         (modulesPath "base/nixos-wsl.nix")
       ];
 
