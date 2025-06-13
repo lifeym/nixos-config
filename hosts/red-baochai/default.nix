@@ -4,7 +4,7 @@
 
 {
   config,
-  lib,
+  mylib,
   pkgs,
   pkgs-stable,
   pkgs-unstable,
@@ -111,7 +111,6 @@ in
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
-    isNormalUser = true;
     extraGroups = [ "networkmanager" "wheel" "libvirtd" ]; # Enable ‘sudo’ for the user.
 
     # To keep user service to stay running after a user logs out.
@@ -209,8 +208,15 @@ in
   # List services that you want to enable:
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
-  services.sshd.enable = true;
+  services.openssh = {
+    enable = true;
+    openFirewall = true; # Open the firewall for SSH connections.
+    settings = {
+      PermitRootLogin = "no"; # Disable root login via SSH.
+      PasswordAuthentication = false; # Disable password authentication.
+      UseDns = true;
+    };
+  };
 
   services.xserver.enable = true;
   services.displayManager.sddm.enable = true;

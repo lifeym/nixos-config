@@ -4,6 +4,7 @@
   imports = [
     ./base.nix
     ./zram.nix
+    ./users.nix
   ];
 
   nix.settings.trusted-users = [ "@wheel" ];
@@ -24,4 +25,6 @@
     source-han-serif # 思源宋体
     sarasa-gothic
   ];
+
+  programs.ssh.startAgent = true;
 }

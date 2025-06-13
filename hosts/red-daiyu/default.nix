@@ -5,6 +5,7 @@
 {
   config,
   lib,
+  mylib,
   pkgs,
   pkgs-stable,
   pkgs-unstable,
@@ -162,7 +163,6 @@ in
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
-    isNormalUser = true;
     extraGroups = [
       "wheel" # Enable ‘sudo’ for the user.
       "libvirtd" # So this user can be used for connecting libvirt
@@ -239,8 +239,15 @@ in
   # List services that you want to enable:
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
-  services.sshd.enable = true;
+  services.openssh = {
+    enable = true;
+    openFirewall = true; # Open the firewall for SSH connections.
+    settings = {
+      PermitRootLogin = "no"; # Disable root login via SSH.
+      PasswordAuthentication = false; # Disable password authentication.
+      UseDns = true;
+    };
+  };
 
   # Samba
   # See: https://nixos.wiki/wiki/Samba
@@ -399,7 +406,6 @@ in
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [
-      22
       80
       443
       2049 # nfs v4
