@@ -118,12 +118,15 @@ in
     linger = true;
     packages = with pkgs-unstable; [
       dbeaver-bin
-      kdePackages.ghostwriter
+      kdePackages.ghostwriter # A Qt Markdown editor
+      keepassxc
+      logseq
       rustdesk
       thunderbird
-      wechat-uos
       vscode
+      wechat-uos
       wpsoffice-cn
+      zettlr
     ];
   };
 
@@ -149,6 +152,7 @@ in
     ripgrep
     shellcheck
     starship
+    termscp
     thefuck
     tmux
     vifm
@@ -191,7 +195,6 @@ in
 
     VIFM = "$HOME/.config/vifm";
     XDG_CONFIG_HOME = "$HOME/.config";
-    VAGRANT_DEFAULT_PROVIDER="libvirt";
   };
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -230,7 +233,6 @@ in
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [
-      22
       80
       443
     ];
