@@ -361,6 +361,12 @@ in
     openFirewall = true;
   };
 
+  # services.xray cannot auto start after server booted(always failed to listen on xxx port)
+  # services.xray = {
+  #   enable = true;
+  #   settingsFile = "/mnt/data/lib/v2fly/config.json";
+  # };
+
   # K3s default private registry file
   # See: https://docs.k3s.io/cli/server
   environment.etc."rancher/k3s/registries.yaml".text = ''
@@ -415,10 +421,10 @@ in
     # allowedUDPPorts = [ ... ];
   };
 
-  # v2ray systemd service
-  systemd.services.v2ray = {
-    description = "V2ray service";
-    path = [ pkgs-unstable.v2ray ];
+  # xray systemd service
+  systemd.services.xray = {
+    description = "Xray service";
+    path = [ pkgs-unstable.xray ];
     requires = [
       "network.target" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
       "network-online.target" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
@@ -429,7 +435,7 @@ in
       "network-online.target"
       "mnt-data.mount"
     ];
-    script = "v2ray run -c /mnt/data/lib/v2fly/config.json";
+    script = "xray run -c /mnt/data/lib/v2fly/config.json";
     wantedBy = [ "multi-user.target" ]; # starting a unit by default at boot time
   };
 
