@@ -1,11 +1,12 @@
 {
   self,
   nixpkgs,
+  nix-darwin,
   ...
 } @ inputs:
 let
   inherit (nixpkgs) lib;
-  mylib = import ../lib { inherit lib; };
+  mylib = import ../lib { inherit lib nix-darwin; };
 
   # Output: devShells."${system}".default
   # Run: `nix devlop` or `nix-shell` to enter the dev shell.
@@ -30,7 +31,7 @@ let
       pkgs-unstable = import inputs.nixpkgs-unstable {
         inherit system; # refer the `system` parameter form outer scope recursively
         # To use chrome, we need to allow the installation of non-free software
-        config.allowUnfree = true;nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+        config.allowUnfree = true;
       };
       pkgs-stable = import inputs.nixpkgs-stable {
         inherit system;
@@ -45,5 +46,5 @@ in
   inherit devShells;
 
   nixosConfigurations = import ./nixos moduleArgs;
-  # darwinConfigurations = import ./darwin moduleArgs;
+  darwinConfigurations = import ./darwin moduleArgs;
 }

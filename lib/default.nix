@@ -1,5 +1,6 @@
 {
   lib,
+  nix-darwin,
 }:
 let
   darwinSystems = [
@@ -83,6 +84,13 @@ rec {
       inherit system;
       modules = nixModulePath.nixos.base
         ++ modules;
+      specialArgs = (mkSpecialArgs system) // { inherit hostName; };
+    };
+
+  darwinSystem = { system, mkSpecialArgs, hostName, modules }:
+    nix-darwin.lib.darwinSystem {
+      modules = nixModulePath.darwin.base
+        ++ modules ++ [{nixpkgs.hostPlatform = system;}];
       specialArgs = (mkSpecialArgs system) // { inherit hostName; };
     };
 
