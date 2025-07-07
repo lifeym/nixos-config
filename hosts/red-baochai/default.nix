@@ -117,7 +117,9 @@ in
     # See: https://wiki.nixos.org/wiki/Systemd/User_Services
     linger = true;
     packages = with pkgs-unstable; [
+      calibre # E-book management application
       dbeaver-bin
+      digikam # Digital photo management application
       kdePackages.ghostwriter # A Qt Markdown editor
       keepassxc
       logseq
