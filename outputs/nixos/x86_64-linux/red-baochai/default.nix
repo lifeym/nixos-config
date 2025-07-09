@@ -13,5 +13,5 @@
   systemNixPkgs = nixpkgs-stable;
 
   # Install extra modules for the system.
-  extraModules = mylib.nixModulePath.nixos.dockerRootless;
+  extraModules = mylib.nixModulePath.nixos.podman;
 }

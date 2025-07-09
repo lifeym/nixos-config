@@ -112,6 +112,10 @@ rec {
       dockerRootless = [
         (modulesPath "nixos/docker-rootless.nix")
       ];
+
+      podman = [
+        (modulesPath "nixos/podman.nix")
+      ];
     };
 
     darwin = {

@@ -118,7 +118,6 @@ in
     linger = true;
     packages = with pkgs-unstable; [
       calibre # E-book management application
-      dbeaver-bin
       digikam # Digital photo management application
       kdePackages.ghostwriter # A Qt Markdown editor
       keepassxc
@@ -129,7 +128,9 @@ in
       wechat-uos
       wpsoffice-cn
       zettlr
-    ];
+    ] ++ (with pkgs;[
+      dbeaver-bin # because of dbeaver-ce-unstable uses java 21, which is not installed by pkgs-stable
+    ]);
   };
 
   # List packages installed in system profile. To search, run:
@@ -236,6 +237,7 @@ in
     enable = true;
     allowedTCPPorts = [
       80
+      8080
       443
     ];
     # allowedUDPPorts = [
