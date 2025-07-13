@@ -31,6 +31,9 @@
     gitui
     gnumake
     go-task
+    hledger
+    hledger-ui
+    hledger-web
     neovim
     nixd # nix lsp
     ripgrep
