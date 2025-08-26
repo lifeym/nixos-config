@@ -146,6 +146,9 @@ in
     git
     gnumake
     go-task
+    hledger
+    hledger-ui
+    hledger-web
     htop
     neovim
     nixd
