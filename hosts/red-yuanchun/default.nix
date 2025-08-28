@@ -26,6 +26,7 @@
     curl
     direnv
     dua
+    eget # Download files from GitHub releases
     gh
     git
     gitui
@@ -34,9 +35,11 @@
     hledger
     hledger-ui
     hledger-web
+    just
     neovim
     nixd # nix lsp
     ripgrep
+    restic
     starship
     termscp
     vifm
