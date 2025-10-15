@@ -126,12 +126,25 @@ in
          };
        };
     };
+
     networks = {
       "20-dhcp-br0" = {
         matchConfig.Name = "br0";
-        networkConfig = {
-          DHCP = "yes";
-        };
+        address = [
+          "192.168.0.6/23"
+          "192.168.0.76/24"
+          "192.168.0.86/24"
+        ];
+        dns = [
+          "192.168.0.1"
+          "114.114.114.114"
+        ];
+        # networkConfig = {
+        #   DHCP = "yes";
+        # };
+        routes = [
+          { Gateway = "192.168.0.1"; }
+        ];
       };
 
       # Connect the bridge ports to the bridge
@@ -166,6 +179,7 @@ in
     extraGroups = [
       "wheel" # Enable ‘sudo’ for the user.
       "libvirtd" # So this user can be used for connecting libvirt
+      "podman"
     ];
 
     # To keep user service to stay running after a user logs out.
@@ -290,16 +304,16 @@ in
       # };
 
       # Apple Time Machine
-      "tm_share" = {
-          "path" = "/mnt/data/lib/samba/tm_share";
-          "valid users" = "lifeym";
-          "public" = "no";
-          "writeable" = "yes";
-          # "force user" = "username";
-          "fruit:aapl" = "yes";
-          "fruit:time machine" = "yes";
-          "vfs objects" = "catia fruit streams_xattr";
-      };
+      # "tm_share" = {
+      #     "path" = "/mnt/data/lib/samba/tm_share";
+      #     "valid users" = "lifeym";
+      #     "public" = "no";
+      #     "writeable" = "yes";
+      #     # "force user" = "username";
+      #     "fruit:aapl" = "yes";
+      #     "fruit:time machine" = "yes";
+      #     "vfs objects" = "catia fruit streams_xattr";
+      # };
     };
   };
 
@@ -325,35 +339,36 @@ in
     openFirewall = true;
   };
 
-  services.k3s = {
-    enable = true;
-    role = "server";
-    #package = pkgs-unstable.k3s_1_31; # Package to use, when updating, to follow k8s version skrew.
-    extraFlags = [
-    # "--debug" # Optionally add additional args to k3s
-      "--flannel-backend none"
-      "--cluster-cidr=10.42.0.0/16"
-      "--cluster-domain=cluster.local"
-      "--tls-san 192.168.0.6 cluster.local"
-      "--disable traefik servicelb"
-      "--disable-network-policy"
-      "--embedded-registry"
-      "--write-kubeconfig-mode 644"
-      "--token symphony"
-    ];
-    environmentFile = "/etc/rancher/k3s/k3s.service.env";
-  };
+  # services.k3s = {
+  #   enable = false;
+  #   role = "server";
+  #   package = pkgs-unstable.k3s_1_33; # Package to use, when updating, to follow k8s version skrew.
+  #   extraFlags = [
+  #   # "--debug" # Optionally add additional args to k3s
+  #     "--flannel-backend none"
+  #     "--cluster-cidr=10.42.0.0/16"
+  #     "--cluster-domain=cluster.local"
+  #     "--tls-san 192.168.0.6 cluster.local"
+  #     "--disable traefik"
+  #     "--disable servicelb"
+  #     "--disable-network-policy"
+  #     "--embedded-registry"
+  #     "--write-kubeconfig-mode 644"
+  #     "--token symphony"
+  #   ];
+  #   environmentFile = "/etc/rancher/k3s/k3s.service.env";
+  # };
 
-  services.nfs.server = {
-    enable = true;
-    exports = ''
-    /mnt/data/nfs/k8s/mysql8 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-    /mnt/data/nfs/k8s/postgres15 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-    /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-    /mnt/data/nfs/k8s/gitea 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-    /mnt/data/nfs/k8s/cjf 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-    '';
-  };
+  # services.nfs.server = {
+  #   enable = true;
+  #   exports = ''
+  #   /mnt/data/nfs/k8s/mysql8 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+  #   /mnt/data/nfs/k8s/postgres15 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+  #   /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+  #   /mnt/data/nfs/k8s/gitea 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+  #   /mnt/data/nfs/k8s/cjf 192.168.0.6(rw,nohide,insecure,no_subtree_check)
+  #   '';
+  # };
 
   services.rustdesk-server = {
     enable = true;
@@ -369,44 +384,104 @@ in
 
   # K3s default private registry file
   # See: https://docs.k3s.io/cli/server
-  environment.etc."rancher/k3s/registries.yaml".text = ''
-  mirrors:
-    docker.elastic.co:
-      endpoint:
-        - "https://elastic.m.daocloud.io"
-    docker.io:
-      endpoint:
-        - "https://docker.m.daocloud.io"
-    gcr.io:
-      endpoint:
-        - "https://gcr.m.daocloud.io"
-    ghcr.io:
-      endpoint:
-        - "https://ghcr.m.daocloud.io"
-    k8s.gcr.io:
-      endpoint:
-        - "https://k8s-gcr.m.daocloud.io"
-    registry.k8s.io:
-      endpoint:
-        - "https://k8s.m.daocloud.io"
-    mcr.microsoft.com:
-      endpoint:
-        - "https://mcr.m.daocloud.io"
-    nvcr.io:
-      endpoint:
-        - "https://nvcr.m.daocloud.io"
-    quay.io:
-      endpoint:
-        - "https://quay.m.daocloud.io"
-  '';
+  # environment.etc."rancher/k3s/registries.yaml".text = ''
+  # mirrors:
+  #   docker.elastic.co:
+  #     endpoint:
+  #       - "https://elastic.m.daocloud.io"
+  #   docker.io:
+  #     endpoint:
+  #       - "https://docker.m.daocloud.io"
+  #   gcr.io:
+  #     endpoint:
+  #       - "https://gcr.m.daocloud.io"
+  #   ghcr.io:
+  #     endpoint:
+  #       - "https://ghcr.m.daocloud.io"
+  #   k8s.gcr.io:
+  #     endpoint:
+  #       - "https://k8s-gcr.m.daocloud.io"
+  #   registry.k8s.io:
+  #     endpoint:
+  #       - "https://k8s.m.daocloud.io"
+  #   mcr.microsoft.com:
+  #     endpoint:
+  #       - "https://mcr.m.daocloud.io"
+  #   nvcr.io:
+  #     endpoint:
+  #       - "https://nvcr.m.daocloud.io"
+  #   quay.io:
+  #     endpoint:
+  #       - "https://quay.m.daocloud.io"
+  # '';
 
-  # K3s environment file
-  # See: https://docs.k3s.io/advanced#configuring-an-http-proxy
-  environment.etc."rancher/k3s/k3s.service.env".text = ''
-  CONTAINERD_HTTP_PROXY=${proxyCfg.httpProxy}
-  CONTAINERD_HTTPS_PROXY=${proxyCfg.httpProxy}
-  CONTAINERD_NO_PROXY=${proxyCfg.noProxy}
-  '';
+  # # K3s environment file
+  # # See: https://docs.k3s.io/advanced#configuring-an-http-proxy
+  # environment.etc."rancher/k3s/k3s.service.env".text = ''
+  # CONTAINERD_HTTP_PROXY=${proxyCfg.httpProxy}
+  # CONTAINERD_HTTPS_PROXY=${proxyCfg.httpProxy}
+  # CONTAINERD_NO_PROXY=${proxyCfg.noProxy}
+  # '';
+
+  services.nginx = {
+    enable = true;
+    virtualHosts = {
+      default = {
+        listen = [
+          {
+            addr = "192.168.0.6";
+            port = 80;
+          }
+        ];
+
+        default = true;
+        extraConfig = ''
+          return 403;
+        '';
+      };
+
+      "git.lifeym.xyz" = {
+        # addSSL = true;
+        # enableACME = true;
+        # root = "/var/www/myhost.org";
+        listen = [
+          {
+            addr = "192.168.0.6";
+            port = 80;
+          }
+        ];
+        locations = {
+          "/" = {
+            # recommendedProxySettings = true;
+            proxyPass = "http://127.0.0.1:3000";
+            extraConfig = ''
+              client_max_body_size 512M;
+              proxy_set_header Connection $http_connection;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+            '';
+          };
+        };
+      };
+    };
+
+    streamConfig = ''
+      # my mysql8
+      server {
+        listen 192.168.0.76:3306;
+        proxy_pass 127.0.0.1:13306;
+      }
+
+      # mysql
+      server {
+        listen 192.168.0.86:3306;
+        proxy_pass 127.0.0.1:13307;
+      }
+    '';
+  };
 
   # Open ports in the firewall.
   networking.firewall = {
@@ -414,8 +489,9 @@ in
     allowedTCPPorts = [
       80
       443
-      2049 # nfs v4
-      6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
+      # 2049 # nfs v4
+      3306 # mysql
+      # 6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
       proxyCfg.port # v2ray
     ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
     # allowedUDPPorts = [ ... ];
@@ -437,6 +513,58 @@ in
     ];
     script = "xray run -c /mnt/data/lib/v2fly/config.json";
     wantedBy = [ "multi-user.target" ]; # starting a unit by default at boot time
+  };
+
+  virtualisation.oci-containers.backend = "podman";
+  virtualisation.oci-containers.containers = {
+    # service name: {backend}-{container_name}
+    mysql8 = {
+      image = "mysql:lts"; #lts = 8.4.x
+      autoStart = true;
+      ports = [ "127.0.0.1:13306:3306" ]; # keep localhost accessable.
+      environment = {
+        MYSQL_ROOT_PASSWORD = "Root87363255"; # init password, changed later.
+        TZ = "Asia/Shanghai";
+      };
+      volumes = [ # /path/on/host:/path/inside/container
+        "/mnt/data/lib/mysql8/mysql:/var/lib/mysql"
+        "/mnt/data/lib/mysql8/conf.d:/etc/mysql/conf.d"
+      ];
+    };
+
+    "cjf-mysql8" = {
+      image = "mysql:lts"; #lts = 8.4.x
+      autoStart = true;
+      ports = [ "127.0.0.1:13307:3306" ]; # keep localhost accesssable.
+      environment = {
+        MYSQL_ROOT_PASSWORD = "Root87363255"; # init password, changed later.
+      };
+      volumes = [ # /path/on/host:/path/inside/container
+        "/etc/localtime:/etc/localtime:ro"
+        "/mnt/data/lib/cjf/mysql8/mysql:/var/lib/mysql"
+        "/mnt/data/lib/cjf/mysql8/conf.d:/etc/mysql/conf.d"
+      ];
+    };
+
+    gitea = {
+      image = "docker.gitea.com/gitea:1.24.6-rootless";
+      autoStart = true;
+      ports = [ "127.0.0.1:3000:3000" "127.0.0.1:2222:2222" ];
+      environment = {
+        USER_UID = "1000";
+        USER_GID = "1000";
+        GITEA__database__DB_TYPE = "mysql";
+        GITEA__database__HOST = "127.0.0.1:13306";
+        GITEA__database__NAME = "gitea";
+        GITEA__database__USER = "gitea"; # sample value, change to suit your prod env.
+        GITEA__database__PASSWD = "gitea"; # sample value, change to suit your prod env.
+      };
+      volumes = [
+        "/etc/localtime:/etc/localtime:ro"
+        "/mnt/data/lib/gitea/data:/var/lib/gitea"
+        "/mnt/data/lib/gitea/config:/etc/gitea"
+      ];
+    };
   };
 
   # Copy the NixOS configuration file and link it from the resulting system
