@@ -137,7 +137,7 @@ in
         ];
         dns = [
           "192.168.0.1"
-          "114.114.114.114"
+          # "114.114.114.114"
         ];
         # networkConfig = {
         #   DHCP = "yes";
@@ -199,6 +199,7 @@ in
     bat
     chezmoi
     clipboard-jh
+    dig # debug dns
     dua
     fzf
     gh
@@ -207,6 +208,7 @@ in
     go-task
     htop
     neovim
+    nmap # debug network
     nushell
     restic # backup tool
     ripgrep
@@ -220,7 +222,7 @@ in
     zoxide
 
     # develop tools
-    argocd
+    # argocd
     direnv
     difftastic
     git-credential-manager
@@ -425,46 +427,35 @@ in
 
   services.nginx = {
     enable = true;
+    recommendedProxySettings = true;
+    recommendedOptimisation = true;
+    recommendedTlsSettings = true;
     virtualHosts = {
-      default = {
-        listen = [
-          {
-            addr = "192.168.0.6";
-            port = 80;
-          }
-        ];
-
-        default = true;
-        extraConfig = ''
-          return 403;
-        '';
-      };
-
       "git.lifeym.xyz" = {
-        # addSSL = true;
-        # enableACME = true;
-        # root = "/var/www/myhost.org";
+        forceSSL = true;
         listen = [
           {
             addr = "192.168.0.6";
-            port = 80;
+            port = 443;
+            ssl = true;
           }
         ];
+        sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
+        sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
         locations = {
           "/" = {
             # recommendedProxySettings = true;
             proxyPass = "http://127.0.0.1:3000";
             extraConfig = ''
-              client_max_body_size 512M;
-              proxy_set_header Connection $http_connection;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
+              client_max_body_size 1G;
             '';
           };
         };
+        extraConfig = ''
+          if ($server_name != $host) {
+            return 444;
+          }
+        '';
       };
     };
 
@@ -481,6 +472,20 @@ in
         proxy_pass 127.0.0.1:13307;
       }
     '';
+  };
+
+  # Let's Encrypt certificates
+  # DNS Validation for tencent cloud dns
+  # See: https://go-acme.github.io/lego/dns/tencentcloud/index.html
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "i@lifeym.xyz";
+    certs."lifeym.xyz" = {
+      domain = "*.lifeym.xyz";
+      dnsProvider = "tencentcloud";
+      environmentFile = "/mnt/data/lib/acme/tencent";
+      group = config.services.nginx.group;
+    };
   };
 
   # Open ports in the firewall.
@@ -515,18 +520,32 @@ in
     wantedBy = [ "multi-user.target" ]; # starting a unit by default at boot time
   };
 
+  # Use custom network to isolate nas apps from normal containers.
+  # Containers not in network:my-nas cannot access them.
+  systemd.services."create-my-nas-network" = {
+    description = "Create custom network for OCI containers";
+    serviceConfig.Type = "oneshot";
+    wantedBy = [ "multi-user.target" ];
+    script = ''
+      ${pkgs.podman}/bin/podman network exists my-nas || \
+      ${pkgs.podman}/bin/podman network create my-nas
+    '';
+  };
+
   virtualisation.oci-containers.backend = "podman";
   virtualisation.oci-containers.containers = {
     # service name: {backend}-{container_name}
     mysql8 = {
       image = "mysql:lts"; #lts = 8.4.x
       autoStart = true;
+      networks = [ "my-nas" ];
       ports = [ "127.0.0.1:13306:3306" ]; # keep localhost accessable.
       environment = {
         MYSQL_ROOT_PASSWORD = "Root87363255"; # init password, changed later.
         TZ = "Asia/Shanghai";
       };
       volumes = [ # /path/on/host:/path/inside/container
+        "/etc/localtime:/etc/localtime:ro"
         "/mnt/data/lib/mysql8/mysql:/var/lib/mysql"
         "/mnt/data/lib/mysql8/conf.d:/etc/mysql/conf.d"
       ];
@@ -535,9 +554,11 @@ in
     "cjf-mysql8" = {
       image = "mysql:lts"; #lts = 8.4.x
       autoStart = true;
+      networks = [ "my-nas" ];
       ports = [ "127.0.0.1:13307:3306" ]; # keep localhost accesssable.
       environment = {
         MYSQL_ROOT_PASSWORD = "Root87363255"; # init password, changed later.
+        TZ = "Asia/Shanghai";
       };
       volumes = [ # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
@@ -548,14 +569,16 @@ in
 
     gitea = {
       image = "docker.gitea.com/gitea:1.24.6-rootless";
+      dependsOn = [ "mysql8" ];
       autoStart = true;
+      networks = [ "my-nas" ];
       ports = [ "127.0.0.1:3000:3000" "127.0.0.1:2222:2222" ];
       environment = {
         USER_UID = "1000";
         USER_GID = "1000";
         GITEA__database__DB_TYPE = "mysql";
-        GITEA__database__HOST = "127.0.0.1:13306";
-        GITEA__database__NAME = "gitea";
+        GITEA__database__HOST = "mysql8:3306";
+        GITEA__database__NAME = "giteadb";
         GITEA__database__USER = "gitea"; # sample value, change to suit your prod env.
         GITEA__database__PASSWD = "gitea"; # sample value, change to suit your prod env.
       };
