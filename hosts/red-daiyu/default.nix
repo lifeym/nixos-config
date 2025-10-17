@@ -13,8 +13,19 @@
   ...
 }:
 let
+  serverAddr = {
+    red-daiyu = "192.168.0.6";
+    web = "192.168.0.70";
+    mariadb = "192.168.0.71";
+    cjf-mariadb = "192.168.0.73";
+  };
+  localAddr = {
+    mariadb = "10.33.0.3";
+    cjf-mariadb = "10.33.0.4";
+    gitea = "10.33.0.5";
+  };
   proxyCfg = {
-    httpProxy = "192.168.0.6:10809";
+    httpProxy = "${serverAddr.red-daiyu}:10809";
     port = 10809;
     noProxy = "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
@@ -131,9 +142,11 @@ in
       "20-dhcp-br0" = {
         matchConfig.Name = "br0";
         address = [
-          "192.168.0.6/23"
-          "192.168.0.76/24"
-          "192.168.0.86/24"
+          "${serverAddr.red-daiyu}/23"
+          "${serverAddr.mariadb}/24" # web
+          "${serverAddr.web}/24" # web
+          "${serverAddr.mariadb}/24" # mysql
+          "${serverAddr.cjf-mariadb}/24" # mysql
         ];
         dns = [
           "192.168.0.1"
@@ -258,6 +271,9 @@ in
   services.openssh = {
     enable = true;
     openFirewall = true; # Open the firewall for SSH connections.
+    listenAddresses = [
+      { addr = serverAddr.red-daiyu; }
+    ];
     settings = {
       PermitRootLogin = "no"; # Disable root login via SSH.
       PasswordAuthentication = false; # Disable password authentication.
@@ -374,7 +390,7 @@ in
 
   services.rustdesk-server = {
     enable = true;
-    signal.relayHosts = [ "192.168.0.6" ];
+    signal.relayHosts = [ serverAddr.red-daiyu ];
     openFirewall = true;
   };
 
@@ -430,46 +446,47 @@ in
     recommendedProxySettings = true;
     recommendedOptimisation = true;
     recommendedTlsSettings = true;
-    virtualHosts = {
-      "git.lifeym.xyz" = {
-        forceSSL = true;
-        listen = [
-          {
-            addr = "192.168.0.6";
-            port = 443;
-            ssl = true;
-          }
-        ];
-        sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
-        sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
-        locations = {
-          "/" = {
-            # recommendedProxySettings = true;
-            proxyPass = "http://127.0.0.1:3000";
-            extraConfig = ''
-              client_max_body_size 1G;
-            '';
-          };
-        };
-        extraConfig = ''
-          if ($server_name != $host) {
-            return 444;
-          }
-        '';
-      };
-    };
-
-    streamConfig = ''
-      # my mysql8
+    appendHttpConfig = ''
       server {
-        listen 192.168.0.76:3306;
-        proxy_pass 127.0.0.1:13306;
+        listen 80;
+        server_name _;
+        location / {
+          return 301 https://$host$request_uri;
+        }
       }
 
-      # mysql
       server {
-        listen 192.168.0.86:3306;
-        proxy_pass 127.0.0.1:13307;
+        listen ${serverAddr.web}:443 ssl ;
+        server_name git.lifeym.xyz ;
+        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
+        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
+        location / {
+          client_max_body_size 1G;
+          proxy_pass http://${localAddr.gitea}:3000;
+        }
+        if ($server_name != $host) {
+          return 301 https://$server_name$request_uri;
+        }
+      }
+    '';
+
+    streamConfig = ''
+      # mariadb
+      server {
+        listen ${serverAddr.mariadb}:3306;
+        proxy_pass ${localAddr.mariadb}:3306;
+      }
+
+      # cjf-mariadb
+      server {
+        listen ${serverAddr.cjf-mariadb}:3306;
+        proxy_pass ${localAddr.cjf-mariadb}:3306;
+      }
+
+      # gitea
+      server {
+        listen ${serverAddr.web}:22;
+        proxy_pass ${localAddr.gitea}:2222;
       }
     '';
   };
@@ -522,62 +539,67 @@ in
 
   # Use custom network to isolate nas apps from normal containers.
   # Containers not in network:my-nas cannot access them.
-  systemd.services."create-my-nas-network" = {
+  systemd.services."create-nas-network" = {
     description = "Create custom network for OCI containers";
     serviceConfig.Type = "oneshot";
     wantedBy = [ "multi-user.target" ];
     script = ''
-      ${pkgs.podman}/bin/podman network exists my-nas || \
-      ${pkgs.podman}/bin/podman network create my-nas
+      ${pkgs.podman}/bin/podman network exists nas || \
+      ${pkgs.podman}/bin/podman network create nas --subnet=10.33.0.0/24 --gateway=10.33.0.1
     '';
   };
 
   virtualisation.oci-containers.backend = "podman";
   virtualisation.oci-containers.containers = {
     # service name: {backend}-{container_name}
-    mysql8 = {
-      image = "mysql:lts"; #lts = 8.4.x
+    mariadb = {
+      image = "mariadb:12";
       autoStart = true;
-      networks = [ "my-nas" ];
-      ports = [ "127.0.0.1:13306:3306" ]; # keep localhost accessable.
-      environment = {
-        MYSQL_ROOT_PASSWORD = "Root87363255"; # init password, changed later.
-        TZ = "Asia/Shanghai";
-      };
+      networks = [ "nas" ];
+      environmentFiles = [
+        # Sample:
+        # MARIADB_ROOT_PASSWORD=YourInitPassword
+        "/mnt/data/lib/mariadb/env"
+      ];
       volumes = [ # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
-        "/mnt/data/lib/mysql8/mysql:/var/lib/mysql"
-        "/mnt/data/lib/mysql8/conf.d:/etc/mysql/conf.d"
+        "/mnt/data/lib/mariadb/mysql:/var/lib/mysql"
+        "/mnt/data/lib/mariadb/conf.d:/etc/mysql/conf.d:ro"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.mariadb}"
       ];
     };
 
-    "cjf-mysql8" = {
-      image = "mysql:lts"; #lts = 8.4.x
+    "cjf-mariadb" = {
+      image = "mariadb:12";
       autoStart = true;
-      networks = [ "my-nas" ];
-      ports = [ "127.0.0.1:13307:3306" ]; # keep localhost accesssable.
-      environment = {
-        MYSQL_ROOT_PASSWORD = "Root87363255"; # init password, changed later.
-        TZ = "Asia/Shanghai";
-      };
+      networks = [ "nas" ];
+      environmentFiles = [
+        # Sample:
+        # MARIADB_ROOT_PASSWORD=YourPassword
+        "/mnt/data/lib/cjf/mariadb/env"
+      ];
       volumes = [ # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
-        "/mnt/data/lib/cjf/mysql8/mysql:/var/lib/mysql"
-        "/mnt/data/lib/cjf/mysql8/conf.d:/etc/mysql/conf.d"
+        "/mnt/data/lib/cjf/mariadb/mysql:/var/lib/mysql"
+        "/mnt/data/lib/cjf/mariadb/conf.d:/etc/mysql/conf.d:ro"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.cjf-mariadb}"
       ];
     };
 
     gitea = {
       image = "docker.gitea.com/gitea:1.24.6-rootless";
-      dependsOn = [ "mysql8" ];
+      dependsOn = [ "mariadb" ];
       autoStart = true;
-      networks = [ "my-nas" ];
-      ports = [ "127.0.0.1:3000:3000" "127.0.0.1:2222:2222" ];
+      networks = [ "nas" ];
       environment = {
         USER_UID = "1000";
         USER_GID = "1000";
         GITEA__database__DB_TYPE = "mysql";
-        GITEA__database__HOST = "mysql8:3306";
+        GITEA__database__HOST = "mariadb:3306";
         GITEA__database__NAME = "giteadb";
         GITEA__database__USER = "gitea"; # sample value, change to suit your prod env.
         GITEA__database__PASSWD = "gitea"; # sample value, change to suit your prod env.
@@ -586,6 +608,9 @@ in
         "/etc/localtime:/etc/localtime:ro"
         "/mnt/data/lib/gitea/data:/var/lib/gitea"
         "/mnt/data/lib/gitea/config:/etc/gitea"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.gitea}"
       ];
     };
   };
