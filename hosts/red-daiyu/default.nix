@@ -227,7 +227,6 @@ in
     ripgrep
     shellcheck
     starship
-    thefuck
     tmux
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
@@ -356,6 +355,11 @@ in
     };
     openFirewall = true;
   };
+
+  # services.easytier = {
+  #   enable = true;
+  #   instances.home.configFile = "/mnt/data/lib/easytier/home.conf";
+  # };
 
   # services.k3s = {
   #   enable = false;
@@ -514,6 +518,8 @@ in
       # 2049 # nfs v4
       3306 # mysql
       # 6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
+      9993 # zerotier
+      # 11010 # easytier
       proxyCfg.port # v2ray
     ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
     # allowedUDPPorts = [ ... ];
