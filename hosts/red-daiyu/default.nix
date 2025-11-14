@@ -17,18 +17,24 @@ let
     red-daiyu = "192.168.0.6";
     web = "192.168.0.70";
     mariadb = "192.168.0.71";
+    postgres = "192.168.0.72";
     cjf-mariadb = "192.168.0.73";
   };
   localAddr = {
     mariadb = "10.33.0.3";
     cjf-mariadb = "10.33.0.4";
     gitea = "10.33.0.5";
+    postgres = "10.33.0.6";
+    concourse = "10.33.0.7";
+    concourse-worker = "10.33.0.10";
   };
   proxyCfg = {
     httpProxy = "${serverAddr.red-daiyu}:10809";
     port = 10809;
     noProxy = "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
+
+  statePath = rel: "/mnt/data/lib/${rel}";
 in
 {
   imports = [
@@ -146,6 +152,7 @@ in
           "${serverAddr.mariadb}/24" # web
           "${serverAddr.web}/24" # web
           "${serverAddr.mariadb}/24" # mysql
+          "${serverAddr.postgres}/24" # mysql
           "${serverAddr.cjf-mariadb}/24" # mysql
         ];
         dns = [
@@ -472,6 +479,20 @@ in
           return 301 https://$server_name$request_uri;
         }
       }
+
+      server {
+        listen ${serverAddr.web}:443 ssl ;
+        server_name ci.lifeym.xyz ;
+        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
+        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
+        location / {
+          # client_max_body_size 1G;
+          proxy_pass http://${localAddr.concourse}:8080;
+        }
+        if ($server_name != $host) {
+          return 301 https://$server_name$request_uri;
+        }
+      }
     '';
 
     streamConfig = ''
@@ -479,6 +500,12 @@ in
       server {
         listen ${serverAddr.mariadb}:3306;
         proxy_pass ${localAddr.mariadb}:3306;
+      }
+
+      # postgres
+      server {
+        listen ${serverAddr.postgres}:5432;
+        proxy_pass ${localAddr.postgres}:5432;
       }
 
       # cjf-mariadb
@@ -504,7 +531,7 @@ in
     certs."lifeym.xyz" = {
       domain = "*.lifeym.xyz";
       dnsProvider = "tencentcloud";
-      environmentFile = "/mnt/data/lib/acme/tencent";
+      environmentFile = statePath "acme/tencent";
       group = config.services.nginx.group;
     };
   };
@@ -517,6 +544,7 @@ in
       443
       # 2049 # nfs v4
       3306 # mysql
+      5432 # postgres
       # 6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
       9993 # zerotier
       # 11010 # easytier
@@ -555,6 +583,19 @@ in
     '';
   };
 
+  # systemd.services.concourse = {
+  #   description = "Concourse ATC Scheduler";
+  #   after = [ "postgresql.service" ];
+  #   wantedBy = [ "multi-user.target" ];
+  #   script = ''
+  #     ${concoursePackage}/bin/concourse web \
+  #       --bind-ip localhost --port 8080 \
+  #       --external-url https://ci.lifeym.xyz \
+  #       --postgres-data-source postgres://concourse:concourse87363255@${localAddr.postgres}:5432/concourse?sslmode=disable \
+  #       --main-team-auth static --static-user admin:password
+  #   '';
+  # };
+
   virtualisation.oci-containers.backend = "podman";
   virtualisation.oci-containers.containers = {
     # service name: {backend}-{container_name}
@@ -565,12 +606,12 @@ in
       environmentFiles = [
         # Sample:
         # MARIADB_ROOT_PASSWORD=YourInitPassword
-        "/mnt/data/lib/mariadb/env"
+        (statePath "mariadb/env")
       ];
       volumes = [ # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
-        "/mnt/data/lib/mariadb/mysql:/var/lib/mysql"
-        "/mnt/data/lib/mariadb/conf.d:/etc/mysql/conf.d:ro"
+        "${statePath "mariadb/mysql"}:/var/lib/mysql"
+        "${statePath "mariadb/conf.d"}:/etc/mysql/conf.d:ro"
       ];
       extraOptions = [
         "--ip=${localAddr.mariadb}"
@@ -584,15 +625,30 @@ in
       environmentFiles = [
         # Sample:
         # MARIADB_ROOT_PASSWORD=YourPassword
-        "/mnt/data/lib/cjf/mariadb/env"
+        (statePath "cjf/mariadb/env")
       ];
       volumes = [ # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
-        "/mnt/data/lib/cjf/mariadb/mysql:/var/lib/mysql"
-        "/mnt/data/lib/cjf/mariadb/conf.d:/etc/mysql/conf.d:ro"
+        "${statePath "cjf/mariadb/mysql"}:/var/lib/mysql"
+        "${statePath "cjf/mariadb/conf.d"}:/etc/mysql/conf.d:ro"
       ];
       extraOptions = [
         "--ip=${localAddr.cjf-mariadb}"
+      ];
+    };
+
+    postgres = {
+      image = "postgres:18";
+      autoStart = true;
+      networks = [ "nas" ];
+      environmentFiles = [
+        (statePath "postgres/env")
+      ];
+      volumes = [
+        "${statePath "postgres/data"}:/var/lib/postgresql"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.postgres}"
       ];
     };
 
@@ -606,17 +662,69 @@ in
         USER_GID = "1000";
         GITEA__database__DB_TYPE = "mysql";
         GITEA__database__HOST = "mariadb:3306";
-        GITEA__database__NAME = "giteadb";
-        GITEA__database__USER = "gitea"; # sample value, change to suit your prod env.
-        GITEA__database__PASSWD = "gitea"; # sample value, change to suit your prod env.
       };
+      environmentFiles = [
+        (statePath "gitea/env")
+      ];
       volumes = [
         "/etc/localtime:/etc/localtime:ro"
-        "/mnt/data/lib/gitea/data:/var/lib/gitea"
-        "/mnt/data/lib/gitea/config:/etc/gitea"
+        "${statePath "gitea/data"}:/var/lib/gitea"
+        "${statePath "gitea/config"}:/etc/gitea"
       ];
       extraOptions = [
         "--ip=${localAddr.gitea}"
+      ];
+    };
+
+    concourse-web = {
+      image = "concourse/concourse:7";
+      cmd = [ "web" ];
+      dependsOn = [ "postgres" ];
+      autoStart = true;
+      networks = [ "nas" ];
+      environment = {
+        CONCOURSE_SESSION_SIGNING_KEY = "/keys/session_signing_key";
+        CONCOURSE_TSA_HOST_KEY = "/keys/tsa_host_key";
+        CONCOURSE_TSA_AUTHORIZED_KEYS = "/keys/worker_key.pub";
+        CONCOURSE_POSTGRES_HOST = "postgres";
+        CONCOURSE_EXTERNAL_URL = "https://ci.lifeym.xyz";
+      };
+      environmentFiles = [
+        (statePath "concourse/env")
+      ];
+      volumes = [
+        "/etc/localtime:/etc/localtime:ro"
+        "${statePath "concourse/keys/session_signing_key"}:/keys/session_signing_key:ro"
+        "${statePath "concourse/keys/tsa_host_key"}:/keys/tsa_host_key:ro"
+        "${statePath "concourse/keys/worker_key.pub"}:/keys/worker_key.pub:ro"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.concourse}"
+      ];
+    };
+
+    concourse-worker = {
+      image = "concourse/concourse:7";
+      cmd = [ "worker" ];
+      dependsOn = [ "concourse-web" ];
+      autoStart = true;
+      networks = [ "nas" ];
+      privileged = true;
+      environment = {
+        CONCOURSE_WORK_DIR = "/opt/concourse/worker";
+        CONCOURSE_TSA_HOST = "${localAddr.concourse}:2222";
+        CONCOURSE_TSA_PUBLIC_KEY = "/keys/tsa_host_key.pub";
+        CONCOURSE_TSA_WORKER_PRIVATE_KEY = "/keys/worker_key";
+      };
+      volumes = [
+        "/etc/localtime:/etc/localtime:ro"
+        "${statePath "concourse/worker"}:/opt/concourse/worker"
+        "${statePath "concourse/keys/tsa_host_key.pub"}:/keys/tsa_host_key.pub:ro"
+        "${statePath "concourse/keys/worker_key"}:/keys/worker_key:ro"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.concourse-worker}"
+        "--cgroupns=host"
       ];
     };
   };
