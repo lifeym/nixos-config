@@ -27,6 +27,8 @@ let
     postgres = "10.33.0.6";
     concourse = "10.33.0.7";
     concourse-worker = "10.33.0.10";
+    registry-ui = "10.33.0.20";
+    registry-server = "10.33.0.21";
   };
   proxyCfg = {
     httpProxy = "${serverAddr.red-daiyu}:10809";
@@ -486,8 +488,20 @@ in
         ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
         ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
         location / {
-          # client_max_body_size 1G;
           proxy_pass http://${localAddr.concourse}:8080;
+        }
+        if ($server_name != $host) {
+          return 301 https://$server_name$request_uri;
+        }
+      }
+
+      server {
+        listen ${serverAddr.web}:443 ssl ;
+        server_name hub.lifeym.xyz ;
+        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
+        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
+        location / {
+          proxy_pass http://${localAddr.registry-ui}:80;
         }
         if ($server_name != $host) {
           return 301 https://$server_name$request_uri;
@@ -725,6 +739,53 @@ in
       extraOptions = [
         "--ip=${localAddr.concourse-worker}"
         "--cgroupns=host"
+      ];
+    };
+
+    registry-ui = {
+      image = "joxit/docker-registry-ui:main";
+      dependsOn = [ "registry-server" ];
+      autoStart = true;
+      networks = [ "nas" ];
+      environment = {
+        SINGLE_REGISTRY = "true";
+        REGISTRY_TITLE = "Docker Registry UI";
+        DELETE_IMAGES = "true";
+        SHOW_CONTENT_DIGEST = "true";
+        NGINX_PROXY_PASS_URL = "http://registry-server:5000";
+        SHOW_CATALOG_NB_TAGS = "true";
+        CATALOG_MIN_BRANCHES = "1";
+        CATALOG_MAX_BRANCHES = "1";
+        TAGLIST_PAGE_SIZE = "100";
+        REGISTRY_SECURED = "false";
+        CATALOG_ELEMENTS_LIMIT = "1000";
+      };
+      volumes = [
+        "/etc/localtime:/etc/localtime:ro"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.registry-ui}"
+      ];
+    };
+
+    registry-server = {
+      image = "registry:3";
+      autoStart = true;
+      networks = [ "nas" ];
+      environment = {
+        REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin = "[https://hub.lifeym.xyz]";
+        REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods = "[HEAD,GET,OPTIONS,DELETE]";
+        REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials = "[true]";
+        REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers = "[Authorization,Accept,Cache-Control]";
+        REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers = "[Docker-Content-Digest]";
+        REGISTRY_STORAGE_DELETE_ENABLED = "true";
+      };
+      volumes = [
+        "/etc/localtime:/etc/localtime:ro"
+        "${statePath "docker_registry/data"}:/var/lib/registry"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.registry-server}"
       ];
     };
   };
