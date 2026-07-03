@@ -77,7 +77,7 @@ in
     fcitx5.waylandFrontend = true;
     fcitx5.addons = with pkgs; [
       kdePackages.fcitx5-qt
-      fcitx5-chinese-addons
+      qt6Packages.fcitx5-chinese-addons
       fcitx5-nord # theme
     ];
   };
@@ -119,13 +119,14 @@ in
     packages = with pkgs-unstable; [
       calibre # E-book management application
       digikam # Digital photo management application
+      espanso
       kdePackages.ghostwriter # A Qt Markdown editor
       keepassxc
-      logseq
+      obsidian
       rustdesk
       thunderbird
       vscode
-      wechat-uos
+      #wechat-uos # got errors from build...
       wpsoffice-cn
       zettlr
     ] ++ (with pkgs;[
@@ -153,13 +154,14 @@ in
     neovim
     nixd
     nushell
+    pay-respects
     qemu
     restic # backup tool
     ripgrep
     shellcheck
     starship
     termscp
-    thefuck
+    # thefuck
     tmux
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
@@ -181,13 +183,13 @@ in
       package = pkgs.qemu;
       runAsRoot = true;
       swtpm.enable = true;
-      ovmf = {
-        enable = true;
-        packages = [(pkgs.OVMF.override {
-          secureBoot = true;
-          tpmSupport = true;
-        }).fd];
-      };
+      # ovmf = {
+      #   enable = true;
+      #   packages = [(pkgs.OVMF.override {
+      #     secureBoot = true;
+      #     tpmSupport = true;
+      #   }).fd];
+      # };
     };
   };
   boot.extraModprobeConfig = "options kvm_amd nested=1";
