@@ -22,14 +22,12 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    beancount
-    beancount-language-server
+    age
     chezmoi
     curl
     direnv
     dua
     eget # Download files from GitHub releases
-    fava  # Web interface for beancount
     gh
     git
     gitui
