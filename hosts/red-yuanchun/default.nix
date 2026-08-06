@@ -37,6 +37,7 @@
     hledger-ui
     hledger-web
     just
+    just-lsp
     neovim
     nixd # nix lsp
     ripgrep
@@ -46,6 +47,7 @@
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget
+    woodpecker-cli
     zoxide
   ];
 
