@@ -25,8 +25,10 @@ let
     cjf-mariadb = "10.33.0.4";
     gitea = "10.33.0.5";
     postgres = "10.33.0.6";
-    concourse = "10.33.0.7";
-    concourse-worker = "10.33.0.10";
+    cwa = "10.33.0.11";
+    # woodpecker = "10.33.0.15";
+    # concourse = "10.33.0.7";
+    # concourse-worker = "10.33.0.10";
     registry-ui = "10.33.0.20";
     registry-server = "10.33.0.21";
   };
@@ -236,7 +238,6 @@ in
     zoxide
 
     # develop tools
-    # argocd
     direnv
     difftastic
     git-credential-manager
@@ -358,40 +359,61 @@ in
     openFirewall = true;
   };
 
+  # Woodpecker Server
+  services.woodpecker-server = {
+    enable = true;
+
+    # 基礎環境配置
+    environment = {
+      # Server fully qualified URL of the user-facing hostname, port (if not default for HTTP/HTTPS) and path prefix.
+      WOODPECKER_HOST = "https://ci.lifeym.xyz";
+
+      # Configures the HTTP listener, supports unix socket via unix:// prefix".
+      WOODPECKER_SERVER_ADDR = ":8000";
+
+      # Enable to allow user registration.
+      WOODPECKER_OPEN = "true";
+
+      # 数据库：单机首选 SQLite，数据存储在 /var/lib/woodpecker-server/
+      # WOODPECKER_DATABASE_DRIVER = "sqlite3";
+      WOODPECKER_DATABASE_DRIVER = "mysql";
+      WOODPECKER_DATABASE_DATASOURCE_FILE = statePath "woodpecker-server/datasource";
+      # WOODPECKER_DATABASE_DATASOURCE = statePath "woodpecker-server/woodpecker.sqlite";
+
+      # 注：此处的 Client ID 和 Secret 需要在 Gitea 的「应用（OAuth2）」中生成
+      WOODPECKER_GITEA = "true";
+      WOODPECKER_GITEA_URL = "https://git.lifeym.xyz";
+      WOODPECKER_GITEA_CLIENT = "ba299b9c-84a6-448d-8e0b-1d04eb7492f1";
+      WOODPECKER_GITEA_SECRET_FILE = statePath "woodpecker-server/gitea-secret";
+
+      # 建議將敏感密鑰放入外部文件（參見下方步驟 2）
+      # WOODPECKER_GITEA_SECRET_FILE = "/run/secrets/woodpecker-gitea-secret";
+      WOODPECKER_AGENT_SECRET_FILE = statePath "woodpecker-server/agent-secret";
+    };
+  };
+
+  #  Woodpecker Agent / Runner
+  services.woodpecker-agents = {
+    agents = {
+      "local-runner" = {
+        enable = true;
+        environment = {
+          WOODPECKER_SERVER = "localhost:8000"; # 連接本機 Server
+          WOODPECKER_MAX_WORKERS = "4";         # 同時並發的構建任務數
+
+          # 告訴 Runner 使用本機的 Podman/Docker 套接字來創建 CI 容器
+          WOODPECKER_BACKEND = "docker";
+          DOCKER_HOST = "unix:///run/podman/podman.sock";
+
+          WOODPECKER_AGENT_SECRET_FILE = statePath "woodpecker-server/agent-secret";
+        };
+      };
+    };
+  };
+
   # services.easytier = {
   #   enable = true;
   #   instances.home.configFile = "/mnt/data/lib/easytier/home.conf";
-  # };
-
-  # services.k3s = {
-  #   enable = false;
-  #   role = "server";
-  #   package = pkgs-unstable.k3s_1_33; # Package to use, when updating, to follow k8s version skrew.
-  #   extraFlags = [
-  #   # "--debug" # Optionally add additional args to k3s
-  #     "--flannel-backend none"
-  #     "--cluster-cidr=10.42.0.0/16"
-  #     "--cluster-domain=cluster.local"
-  #     "--tls-san 192.168.0.6 cluster.local"
-  #     "--disable traefik"
-  #     "--disable servicelb"
-  #     "--disable-network-policy"
-  #     "--embedded-registry"
-  #     "--write-kubeconfig-mode 644"
-  #     "--token symphony"
-  #   ];
-  #   environmentFile = "/etc/rancher/k3s/k3s.service.env";
-  # };
-
-  # services.nfs.server = {
-  #   enable = true;
-  #   exports = ''
-  #   /mnt/data/nfs/k8s/mysql8 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-  #   /mnt/data/nfs/k8s/postgres15 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-  #   /mnt/data/nfs/k8s/pv 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-  #   /mnt/data/nfs/k8s/gitea 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-  #   /mnt/data/nfs/k8s/cjf 192.168.0.6(rw,nohide,insecure,no_subtree_check)
-  #   '';
   # };
 
   services.rustdesk-server = {
@@ -399,53 +421,6 @@ in
     signal.relayHosts = [ serverAddr.red-daiyu ];
     openFirewall = true;
   };
-
-  # services.xray cannot auto start after server booted(always failed to listen on xxx port)
-  # services.xray = {
-  #   enable = true;
-  #   settingsFile = "/mnt/data/lib/v2fly/config.json";
-  # };
-
-  # K3s default private registry file
-  # See: https://docs.k3s.io/cli/server
-  # environment.etc."rancher/k3s/registries.yaml".text = ''
-  # mirrors:
-  #   docker.elastic.co:
-  #     endpoint:
-  #       - "https://elastic.m.daocloud.io"
-  #   docker.io:
-  #     endpoint:
-  #       - "https://docker.m.daocloud.io"
-  #   gcr.io:
-  #     endpoint:
-  #       - "https://gcr.m.daocloud.io"
-  #   ghcr.io:
-  #     endpoint:
-  #       - "https://ghcr.m.daocloud.io"
-  #   k8s.gcr.io:
-  #     endpoint:
-  #       - "https://k8s-gcr.m.daocloud.io"
-  #   registry.k8s.io:
-  #     endpoint:
-  #       - "https://k8s.m.daocloud.io"
-  #   mcr.microsoft.com:
-  #     endpoint:
-  #       - "https://mcr.m.daocloud.io"
-  #   nvcr.io:
-  #     endpoint:
-  #       - "https://nvcr.m.daocloud.io"
-  #   quay.io:
-  #     endpoint:
-  #       - "https://quay.m.daocloud.io"
-  # '';
-
-  # # K3s environment file
-  # # See: https://docs.k3s.io/advanced#configuring-an-http-proxy
-  # environment.etc."rancher/k3s/k3s.service.env".text = ''
-  # CONTAINERD_HTTP_PROXY=${proxyCfg.httpProxy}
-  # CONTAINERD_HTTPS_PROXY=${proxyCfg.httpProxy}
-  # CONTAINERD_NO_PROXY=${proxyCfg.noProxy}
-  # '';
 
   services.nginx = {
     enable = true;
@@ -481,7 +456,7 @@ in
         ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
         ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
         location / {
-          proxy_pass http://${localAddr.concourse}:8080;
+          proxy_pass http://localhost:8000;
         }
         if ($server_name != $host) {
           return 301 https://$server_name$request_uri;
@@ -495,6 +470,19 @@ in
         ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
         location / {
           proxy_pass http://${localAddr.registry-ui}:80;
+        }
+        if ($server_name != $host) {
+          return 301 https://$server_name$request_uri;
+        }
+      }
+
+      server {
+        listen ${serverAddr.web}:443 ssl ;
+        server_name cwa.lifeym.xyz ;
+        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
+        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
+        location / {
+          proxy_pass http://${localAddr.cwa}:8083;
         }
         if ($server_name != $host) {
           return 301 https://$server_name$request_uri;
@@ -590,22 +578,29 @@ in
     '';
   };
 
-  # systemd.services.concourse = {
-  #   description = "Concourse ATC Scheduler";
-  #   after = [ "postgresql.service" ];
-  #   wantedBy = [ "multi-user.target" ];
-  #   script = ''
-  #     ${concoursePackage}/bin/concourse web \
-  #       --bind-ip localhost --port 8080 \
-  #       --external-url https://ci.lifeym.xyz \
-  #       --postgres-data-source postgres://concourse:concourse87363255@${localAddr.postgres}:5432/concourse?sslmode=disable \
-  #       --main-team-auth static --static-user admin:password
-  #   '';
-  # };
-
   virtualisation.oci-containers.backend = "podman";
   virtualisation.oci-containers.containers = {
     # service name: {backend}-{container_name}
+    calibre-web-automated = {
+      image = "crocodilestick/calibre-web-automated:v4.0.6";
+      autoStart = true;
+      networks = [ "nas" ];
+      environment = {
+        PUID = "1000";
+        PGID = "100";
+        TZ = "Asia/Shanghai";
+      };
+      volumes = [
+        # "/etc/localtime:/etc/localtime:ro"
+        "${statePath "cwa/config"}:/config"
+        "${statePath "cwa/ingest"}:/cwa-book-ingest"
+        "/mnt/data/calibre-library:/calibre-library"
+      ];
+      extraOptions = [
+        "--ip=${localAddr.cwa}"
+      ];
+    };
+
     mariadb = {
       image = "mariadb:12";
       autoStart = true;
@@ -660,7 +655,7 @@ in
     };
 
     gitea = {
-      image = "docker.gitea.com/gitea:1.24.6-rootless";
+      image = "docker.gitea.com/gitea:1.27-rootless";
       dependsOn = [ "mariadb" ];
       autoStart = true;
       networks = [ "nas" ];
@@ -680,58 +675,6 @@ in
       ];
       extraOptions = [
         "--ip=${localAddr.gitea}"
-      ];
-    };
-
-    concourse-web = {
-      image = "concourse/concourse:7";
-      cmd = [ "web" ];
-      dependsOn = [ "postgres" ];
-      autoStart = true;
-      networks = [ "nas" ];
-      environment = {
-        CONCOURSE_SESSION_SIGNING_KEY = "/keys/session_signing_key";
-        CONCOURSE_TSA_HOST_KEY = "/keys/tsa_host_key";
-        CONCOURSE_TSA_AUTHORIZED_KEYS = "/keys/worker_key.pub";
-        CONCOURSE_POSTGRES_HOST = "postgres";
-        CONCOURSE_EXTERNAL_URL = "https://ci.lifeym.xyz";
-      };
-      environmentFiles = [
-        (statePath "concourse/env")
-      ];
-      volumes = [
-        "/etc/localtime:/etc/localtime:ro"
-        "${statePath "concourse/keys/session_signing_key"}:/keys/session_signing_key:ro"
-        "${statePath "concourse/keys/tsa_host_key"}:/keys/tsa_host_key:ro"
-        "${statePath "concourse/keys/worker_key.pub"}:/keys/worker_key.pub:ro"
-      ];
-      extraOptions = [
-        "--ip=${localAddr.concourse}"
-      ];
-    };
-
-    concourse-worker = {
-      image = "concourse/concourse:7";
-      cmd = [ "worker" ];
-      dependsOn = [ "concourse-web" ];
-      autoStart = true;
-      networks = [ "nas" ];
-      privileged = true;
-      environment = {
-        CONCOURSE_WORK_DIR = "/opt/concourse/worker";
-        CONCOURSE_TSA_HOST = "${localAddr.concourse}:2222";
-        CONCOURSE_TSA_PUBLIC_KEY = "/keys/tsa_host_key.pub";
-        CONCOURSE_TSA_WORKER_PRIVATE_KEY = "/keys/worker_key";
-      };
-      volumes = [
-        "/etc/localtime:/etc/localtime:ro"
-        "${statePath "concourse/worker"}:/opt/concourse/worker"
-        "${statePath "concourse/keys/tsa_host_key.pub"}:/keys/tsa_host_key.pub:ro"
-        "${statePath "concourse/keys/worker_key"}:/keys/worker_key:ro"
-      ];
-      extraOptions = [
-        "--ip=${localAddr.concourse-worker}"
-        "--cgroupns=host"
       ];
     };
 
