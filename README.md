@@ -14,3 +14,11 @@
 3. Copy hardware-configuration.nix to the "host name folder" too.
 4. Create a folder which name equals step 1's under outputs/nixos/"system"/ (or outputs/darwin/"system/" if use macos), which "system" is the system of host.
 5. Follow other host's file contents as sample.
+
+## For first time use in china
+It's slow to build nixos in china, we need some mirrors.
+1. cp init-config.nix /etc/nixos/
+2. Edit /etc/nixos/configuration.nix. to import init-config.nix
+3. nixos-rebuild switch
+4. Don't forget to remove /etc/nixos/init-config.nix after you're done.
+5. Then u have mirrors configured, follow the general steps to go on.
