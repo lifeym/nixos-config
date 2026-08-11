@@ -49,10 +49,10 @@ in
   # Enable OpenGL
   # See: https://wiki.nixos.org/wiki/AMD_GPU
   # See: https://wiki.nixos.org/wiki/Graphics#OpenGL
-  # hardware.graphics = {
-  #   enable = true;
-  #   enable32Bit = true;
-  # };
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
 
   boot.initrd.kernelModules = [
     "dm-snapshot"
@@ -70,9 +70,17 @@ in
   virtualisation.libvirtd = {
     enable = true;
     qemu = {
-      package = pkgs.qemu_kvm;
+      package = pkgs.qemu_full;
       runAsRoot = true;
       swtpm.enable = true;
+      verbatimConfig = ''
+        cgroup_device_acl = [
+          "/dev/null", "/dev/full", "/dev/zero",
+          "/dev/random", "/dev/urandom",
+          "/dev/ptmx", "/dev/kvm",
+          "/dev/dri/renderD128"
+        ]
+      '';
     };
   };
 
@@ -236,6 +244,7 @@ in
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget # curl sometimes failed to download files, wget come to help.
     zoxide
+    sops # secrets management tool, can be used with restic to automate backup operation.
 
     # develop tools
     direnv
