@@ -233,6 +233,11 @@ in
   services.displayManager.sddm.enable = true;
   services.displayManager.sddm.wayland.enable = true;
   services.desktopManager.plasma6.enable = true;
+  services.xrdp = {
+    enable = true;
+    defaultWindowManager = "startplasma-x11";
+    openFirewall = true;
+  };
 
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
@@ -245,9 +250,6 @@ in
       8080
       443
     ];
-    # allowedUDPPorts = [
-    #   21116 # rustdesk
-    # ];
   };
 
   # Copy the NixOS configuration file and link it from the resulting system
