@@ -433,12 +433,14 @@ in
         "/mnt/data/mariadb"
       ];
       pruneOpts = [
+        "--group-by host,tags"
         "--keep-daily 7"
         "--keep-weekly 4"
         "--keep-monthly 3"
       ];
       extraBackupArgs = [
         "--skip-if-unchanged"
+        "--tag system"
       ];
       timerConfig = {
         OnCalendar = "00:30";
