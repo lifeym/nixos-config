@@ -244,14 +244,13 @@ in
     restic # backup tool
     ripgrep
     shellcheck
-    sops
+    sops # secrets management tool, can be used with restic to automate backup operation.
     starship
     tmux
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget # curl sometimes failed to download files, wget come to help.
     zoxide
-    sops # secrets management tool, can be used with restic to automate backup operation.
 
     # develop tools
     direnv
