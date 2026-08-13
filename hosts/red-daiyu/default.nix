@@ -244,6 +244,7 @@ in
     restic # backup tool
     ripgrep
     shellcheck
+    sops
     starship
     tmux
     vifm
