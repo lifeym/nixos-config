@@ -17,18 +17,14 @@ let
     red-daiyu = "192.168.0.6";
     web = "192.168.0.70";
     mariadb = "192.168.0.71";
-    postgres = "192.168.0.72";
     cjf-mariadb = "192.168.0.73";
   };
   localAddr = {
     mariadb = "10.33.0.3";
     cjf-mariadb = "10.33.0.4";
     gitea = "10.33.0.5";
-    postgres = "10.33.0.6";
     cwa = "10.33.0.11";
     # woodpecker = "10.33.0.15";
-    # concourse = "10.33.0.7";
-    # concourse-worker = "10.33.0.10";
     registry-ui = "10.33.0.20";
     registry-server = "10.33.0.21";
   };
@@ -154,10 +150,8 @@ in
         matchConfig.Name = "br0";
         address = [
           "${serverAddr.red-daiyu}/23"
-          "${serverAddr.mariadb}/24" # web
           "${serverAddr.web}/24" # web
           "${serverAddr.mariadb}/24" # mysql
-          "${serverAddr.postgres}/24" # mysql
           "${serverAddr.cjf-mariadb}/24" # mysql
         ];
         dns = [
@@ -200,27 +194,39 @@ in
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
-  users.users.lifeym = {
-    extraGroups = [
-      "wheel" # Enable ‘sudo’ for the user.
-      "libvirtd" # So this user can be used for connecting libvirt
-      "podman"
-    ];
+  users = {
+    users.lifeym = {
+      extraGroups = [
+        "wheel" # Enable ‘sudo’ for the user.
+        "libvirtd" # So this user can be used for connecting libvirt
+        "podman"
+      ];
 
-    # To keep user service to stay running after a user logs out.
-    # See: https://wiki.nixos.org/wiki/Systemd/User_Services
-    linger = true;
-    packages = with pkgs; [];
+      # To keep user service to stay running after a user logs out.
+      # See: https://wiki.nixos.org/wiki/Systemd/User_Services
+      linger = true;
+      packages = with pkgs; [];
+    };
+
+    users.minidlna = {
+      extraGroups = [ "users" ]; # So minidlna can access the files.
+    };
   };
 
-  users.users.minidlna = {
-    extraGroups = [ "users" ]; # So minidlna can access the files.
+  sops = {
+    defaultSopsFile = ./secrets.yaml;
+    age.keyFile = "/home/lifeym/.config/sops/age/keys.txt";
+    secrets = {
+      "repo/red-daiyu/password" = {};
+      "repo/red-daiyu/path" = {};
+    };
   };
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     # utilities
+    age
     bat
     chezmoi
     clipboard-jh
@@ -331,18 +337,6 @@ in
       #   "force user" = "username";
       #   "force group" = "groupname";
       # };
-
-      # Apple Time Machine
-      # "tm_share" = {
-      #     "path" = "/mnt/data/lib/samba/tm_share";
-      #     "valid users" = "lifeym";
-      #     "public" = "no";
-      #     "writeable" = "yes";
-      #     # "force user" = "username";
-      #     "fruit:aapl" = "yes";
-      #     "fruit:time machine" = "yes";
-      #     "vfs objects" = "catia fruit streams_xattr";
-      # };
     };
   };
 
@@ -425,10 +419,39 @@ in
   #   instances.home.configFile = "/mnt/data/lib/easytier/home.conf";
   # };
 
-  services.rustdesk-server = {
-    enable = true;
-    signal.relayHosts = [ serverAddr.red-daiyu ];
-    openFirewall = true;
+  services.restic.backups = {
+    red-daiyu = {
+      initialize = true;
+      paths = [
+        "/mnt/data"
+      ];
+      exclude = [
+        "/mnt/data/media"
+        "/mnt/data/restic"
+        "/mnt/data/shared"
+        "/mnt/data/cjf"
+        "/mnt/data/mariadb"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 4"
+        "--keep-monthly 3"
+      ];
+      extraBackupArgs = [
+        "--skip-if-unchanged"
+      ];
+      timerConfig = {
+        OnCalendar = "00:30";
+        Persistent = true;
+        RandomizedDelaySec = "1h";
+      };
+
+      # Encryption key for repository
+      passwordFile = config.sops.secrets."repo/red-daiyu/password".path;
+
+      # Server URL
+      repositoryFile = config.sops.secrets."repo/red-daiyu/path".path;
+    };
   };
 
   services.nginx = {
@@ -506,12 +529,6 @@ in
         proxy_pass ${localAddr.mariadb}:3306;
       }
 
-      # postgres
-      server {
-        listen ${serverAddr.postgres}:5432;
-        proxy_pass ${localAddr.postgres}:5432;
-      }
-
       # cjf-mariadb
       server {
         listen ${serverAddr.cjf-mariadb}:3306;
@@ -546,12 +563,8 @@ in
     allowedTCPPorts = [
       80
       443
-      # 2049 # nfs v4
       3306 # mysql
-      5432 # postgres
-      # 6443 # k3s: required so that pods can reach the API server (running on port 6443 by default)
-      9993 # zerotier
-      # 11010 # easytier
+      11010 # easytier
       proxyCfg.port # v2ray
     ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
     # allowedUDPPorts = [ ... ];
@@ -645,21 +658,6 @@ in
       ];
       extraOptions = [
         "--ip=${localAddr.cjf-mariadb}"
-      ];
-    };
-
-    postgres = {
-      image = "postgres:18";
-      autoStart = true;
-      networks = [ "nas" ];
-      environmentFiles = [
-        (statePath "postgres/env")
-      ];
-      volumes = [
-        "${statePath "postgres/data"}:/var/lib/postgresql"
-      ];
-      extraOptions = [
-        "--ip=${localAddr.postgres}"
       ];
     };
 

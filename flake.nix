@@ -26,5 +26,15 @@
 
     # nix-wsl
     nixos-wsl.url = "github:nix-community/NixOS-WSL/main";
+
+    # sops-nix
+    sops-nix-stable = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs-stable";
+    };
+    sops-nix-unstable = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 }
