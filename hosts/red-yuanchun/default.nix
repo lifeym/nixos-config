@@ -16,6 +16,8 @@
     inherit hostName;
   };
 
+  time.timeZone = "Asia/Shanghai";
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
 
