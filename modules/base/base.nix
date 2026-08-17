@@ -16,10 +16,14 @@
 
     # SJTUG contains not only nixos, but also nix-darwin caches
     substituters = [
+      "https://cache.lifeym.xyz?priority=30"
       "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
-      # "https://mirror.iscas.ac.cn/nix-channels/store"
       "https://mirrors.ustc.edu.cn/nix-channels/store"
       "https://mirror.sjtu.edu.cn/nix-channels/store"
+    ];
+
+    trusted-public-keys = [
+      "cache.lifeym.xyz:LoYiW1FSLDeG9GGZP7QnI5hfn5aXQ5DDdui9TBzirtQ="
     ];
 
     # Optimize storage

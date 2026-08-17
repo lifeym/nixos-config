@@ -300,6 +300,13 @@ in
     };
   };
 
+  # Binary Cache!
+  services.nix-serve = {
+    enable = true;
+    bindAddress = "localhost";
+    secretKeyFile = "/mnt/data/lib/nix-serve/cache-private-key.pem";
+  };
+
   # Samba
   # See: https://nixos.wiki/wiki/Samba
   # SeeAlso: smb.conf man (https://www.samba.org/samba/docs/current/man-html/smb.conf.5)
@@ -458,7 +465,49 @@ in
     };
   };
 
-  services.nginx = {
+  services.nginx = let
+    sslServer = { serverName, extraConfig ? "", proxyPassAddr }: ''
+      server {
+        listen ${serverAddr.web}:443 ssl ;
+        server_name ${serverName} ;
+        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
+        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
+        location / {
+          ${extraConfig}
+          proxy_pass http://${proxyPassAddr};
+        }
+        if ($server_name != $host) {
+          return 301 https://$server_name$request_uri;
+        }
+      }
+    '';
+
+    giteaServer = sslServer {
+      serverName = "git.lifeym.xyz";
+      extraConfig = "client_max_body_size 1G;";
+      proxyPassAddr = "${localAddr.gitea}:3000";
+    };
+
+    woodpeckerServer = sslServer {
+      serverName = "ci.lifeym.xyz";
+      proxyPassAddr = "localhost:8000";
+    };
+
+    dockerRegistryServer = sslServer {
+      serverName = "hub.lifeym.xyz";
+      proxyPassAddr = "${localAddr.registry-ui}:80";
+    };
+
+    cwaServer = sslServer {
+      serverName = "cwa.lifeym.xyz";
+      proxyPassAddr = "${localAddr.cwa}:8083";
+    };
+
+    nixServeServer = sslServer {
+      serverName = "cache.lifeym.xyz";
+      proxyPassAddr = "${config.services.nix-serve.bindAddress}:${toString config.services.nix-serve.port}";
+    };
+  in {
     enable = true;
     recommendedProxySettings = true;
     recommendedOptimisation = true;
@@ -472,58 +521,15 @@ in
         }
       }
 
-      server {
-        listen ${serverAddr.web}:443 ssl ;
-        server_name git.lifeym.xyz ;
-        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
-        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
-        location / {
-          client_max_body_size 1G;
-          proxy_pass http://${localAddr.gitea}:3000;
-        }
-        if ($server_name != $host) {
-          return 301 https://$server_name$request_uri;
-        }
-      }
+      ${giteaServer}
 
-      server {
-        listen ${serverAddr.web}:443 ssl ;
-        server_name ci.lifeym.xyz ;
-        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
-        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
-        location / {
-          proxy_pass http://localhost:8000;
-        }
-        if ($server_name != $host) {
-          return 301 https://$server_name$request_uri;
-        }
-      }
+      ${woodpeckerServer}
 
-      server {
-        listen ${serverAddr.web}:443 ssl ;
-        server_name hub.lifeym.xyz ;
-        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
-        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
-        location / {
-          proxy_pass http://${localAddr.registry-ui}:80;
-        }
-        if ($server_name != $host) {
-          return 301 https://$server_name$request_uri;
-        }
-      }
+      ${dockerRegistryServer}
 
-      server {
-        listen ${serverAddr.web}:443 ssl ;
-        server_name cwa.lifeym.xyz ;
-        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
-        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
-        location / {
-          proxy_pass http://${localAddr.cwa}:8083;
-        }
-        if ($server_name != $host) {
-          return 301 https://$server_name$request_uri;
-        }
-      }
+      ${cwaServer}
+
+      ${nixServeServer}
     '';
 
     streamConfig = ''
@@ -604,6 +610,7 @@ in
     '';
   };
 
+  # mariadb backup
   systemd.services."mariadb-backup" = mylib.systemdService.mkMariaBackup {
     containerName = "mariadb";
     databases = [ "giteadb" "sis" "woodpecker" ];
@@ -614,12 +621,49 @@ in
     dbPasswordFile = config.sops.secrets."db/mariadb/password".path;
   };
 
-  systemd.timers."mariadb-backup" = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "00:15";
-      Persistent = true;
+  # systemd.timers."mariadb-backup" = {
+  #   wantedBy = [ "timers.target" ];
+  #   timerConfig = {
+  #     OnCalendar = "00:15";
+  #     Persistent = true;
+  #   };
+  # };
+
+  # git repo backup
+  # git仓库备份用命令：git clone --mirror
+  systemd.services."git-repo-sync" = {
+    description = "Pre-backup Git repositories sync";
+    script = ''
+      set -e
+      GIT_DIR="/mnt/data/backup/git"
+
+      echo "=== 开始更新所有 Git 仓库 ==="
+      for repo in "$GIT_DIR"/*; do
+        if [ -d "$repo/.git" ]; then
+          echo "正在更新: $(basename "$repo")"
+          (cd "$repo" && ${pkgs.git}/bin/git fetch --all --prune --tags --quiet) &
+        fi
+      done
+      wait
+      echo "=== 所有 Git 仓库已成功同步 ==="
+    '';
+    path = [ pkgs.git pkgs.bash pkgs.coreutils ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "root"; # 可依需求調整為你的用戶名
     };
+  };
+
+  # 注入restic备份依赖，确保本地备份数据拉取先进行
+  systemd.services."restic-backups-red-daiyu" = {
+    wants = [
+      "git-repo-sync.service"
+      "mariadb-backup.service"
+    ];
+    after = [
+      "git-repo-sync.service"
+      "mariadb-backup.service"
+    ];
   };
 
   virtualisation.oci-containers.backend = "podman";
