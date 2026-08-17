@@ -156,19 +156,18 @@ in
     nushell
     pay-respects
     qemu
+    rclone
     restic # backup tool
     ripgrep
     shellcheck
     starship
     termscp
-    # thefuck
     tmux
     vifm
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     zoxide
 
     # develop tools
-    argocd
     direnv
     difftastic
     ghostty
@@ -215,6 +214,7 @@ in
   programs.zsh.enable = true;
   programs.firefox.enable = true;
   programs.virt-manager.enable = true;
+  programs.kdeconnect.enable = true;
 
   # List services that you want to enable:
 
