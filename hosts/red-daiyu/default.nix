@@ -219,6 +219,8 @@ in
     secrets = {
       "repo/red-daiyu/password" = {};
       "repo/red-daiyu/path" = {};
+      "db/mariadb/user" = {};
+      "db/mariadb/password" = {};
     };
   };
 
@@ -443,7 +445,7 @@ in
         "--tag system"
       ];
       timerConfig = {
-        OnCalendar = "00:30";
+        OnCalendar = "01:30";
         Persistent = true;
         RandomizedDelaySec = "1h";
       };
@@ -600,6 +602,24 @@ in
       ${pkgs.podman}/bin/podman network exists nas || \
       ${pkgs.podman}/bin/podman network create nas --subnet=10.33.0.0/24 --gateway=10.33.0.1
     '';
+  };
+
+  systemd.services."mariadb-backup" = mylib.systemdService.mkMariaBackup {
+    containerName = "mariadb";
+    databases = [ "giteadb" "sis" "woodpecker" ];
+    pkgs = pkgs;
+    backend = "podman";
+    backupDir = "/mnt/data/backup/mariadb";
+    dbUserFile = config.sops.secrets."db/mariadb/user".path;
+    dbPasswordFile = config.sops.secrets."db/mariadb/password".path;
+  };
+
+  systemd.timers."mariadb-backup" = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "00:15";
+      Persistent = true;
+    };
   };
 
   virtualisation.oci-containers.backend = "podman";

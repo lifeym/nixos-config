@@ -140,4 +140,57 @@ rec {
           (hostModulePath "${hostPath}")
         )
         hostPathList;
+
+  systemdService = {
+    mkMariaBackup = {
+      containerName,
+      backupDir,
+      databases,
+      pkgs,
+      backend ? "docker",
+      dbUserFile,
+      dbPasswordFile,
+      keepDays ? 14,
+    }:
+    let
+      engine = assert builtins.elem backend [ "podman" "docker" ]; backend;
+    in {
+      description = "Backup MariaDB Docker Container (${containerName})";
+      wants = [ "${engine}.service" ];
+      after = [ "${engine}.service" ];
+      script = ''
+        export PATH=${pkgs.${engine}}/bin:${pkgs.coreutils}/bin:${pkgs.zstd}/bin:$PATH
+        BACKUP_DIR="${backupDir}"
+        mkdir -p "$BACKUP_DIR"
+        DATE=$(date +%Y%m%d_%H%M%S)
+        DB_USER="$(cat ${dbUserFile})"
+        DB_PASSWORD="$(cat ${dbPasswordFile})"
+
+        ${builtins.concatStringsSep "\n" (map (db: ''
+          echo "正在备份 ${containerName} 的数据库: ${db}..."
+          ${engine} exec ${containerName} mariadb-dump \
+            --single-transaction \
+            --quick \
+            -u $DB_USER \
+            -p"$DB_PASSWORD" \
+            ${db} | zstd -o "$BACKUP_DIR/${db}_$DATE.sql.zst"
+
+          if [ $? -eq 0 ]; then
+            echo "备份数据库: ${db} 成功！"
+          else
+            echo "备份数据库: ${db} 出错！" >&2
+            if [ -f "$BACKUP_DIR/${db}_$DATE.sql.zst" ]; then
+              rm -f "$BACKUP_DIR/${db}_$DATE.sql.zst"
+            fi
+          fi
+
+          find "$BACKUP_DIR" -name "${db}_*.sql.zst" -mtime +${toString keepDays} -delete
+        '') databases)}
+      '';
+      serviceConfig = {
+        Type = "oneshot";
+        User = "root";
+      };
+    };
+  };
 }
