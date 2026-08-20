@@ -307,6 +307,19 @@ in
     secretKeyFile = "/mnt/data/lib/nix-serve/cache-private-key.pem";
   };
 
+  # navidrome
+  services.navidrome = {
+    enable = true;
+    settings = {
+      Address = "localhost";
+      Port = 4533;
+      MusicFolder = "/mnt/data/media/music";
+      DataFolder = "/mnt/data/lib/navidrome";
+      ScanSchedule = "@every 30m";
+      EnableInsightsCollector = false;
+    };
+  };
+
   # Samba
   # See: https://nixos.wiki/wiki/Samba
   # SeeAlso: smb.conf man (https://www.samba.org/samba/docs/current/man-html/smb.conf.5)
@@ -436,6 +449,7 @@ in
       ];
       exclude = [
         "/mnt/data/media"
+        "/mnt/data/backup/media"
         "/mnt/data/restic"
         "/mnt/data/shared"
         "/mnt/data/cjf"
@@ -507,6 +521,11 @@ in
       serverName = "cache.lifeym.xyz";
       proxyPassAddr = "${config.services.nix-serve.bindAddress}:${toString config.services.nix-serve.port}";
     };
+
+    navidromeServer = sslServer {
+      serverName = "aud.lifeym.xyz";
+      proxyPassAddr = "${config.services.navidrome.settings.Address}:${toString config.services.navidrome.settings.Port}";
+    };
   in {
     enable = true;
     recommendedProxySettings = true;
@@ -530,6 +549,8 @@ in
       ${cwaServer}
 
       ${nixServeServer}
+
+      ${navidromeServer}
     '';
 
     streamConfig = ''
