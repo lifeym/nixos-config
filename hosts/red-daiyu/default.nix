@@ -446,8 +446,9 @@ in
         "/mnt/data/backup/media"
         "/mnt/data/restic"
         "/mnt/data/shared"
-        "/mnt/data/cjf"
-        "/mnt/data/mariadb"
+        "/mnt/data/lib/ncps/store"
+        "/mnt/data/lib/cjf"
+        "/mnt/data/lib/mariadb"
       ];
       pruneOpts = [
         "--group-by host,tags"
