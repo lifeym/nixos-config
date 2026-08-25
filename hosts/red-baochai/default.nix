@@ -123,7 +123,6 @@ in
       kdePackages.ghostwriter # A Qt Markdown editor
       keepassxc
       obsidian
-      rustdesk
       thunderbird
       vscode
       #wechat-uos # got errors from build...
@@ -214,7 +213,6 @@ in
   programs.zsh.enable = true;
   programs.firefox.enable = true;
   programs.virt-manager.enable = true;
-  programs.kdeconnect.enable = true;
 
   # List services that you want to enable:
 
