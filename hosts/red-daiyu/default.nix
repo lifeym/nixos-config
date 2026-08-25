@@ -300,13 +300,6 @@ in
     };
   };
 
-  # Binary Cache!
-  services.nix-serve = {
-    enable = true;
-    bindAddress = "localhost";
-    secretKeyFile = "/mnt/data/lib/nix-serve/cache-private-key.pem";
-  };
-
   # navidrome
   services.navidrome = {
     enable = true;
@@ -317,6 +310,7 @@ in
       DataFolder = "/mnt/data/lib/navidrome";
       ScanSchedule = "@every 30m";
       EnableInsightsCollector = false;
+      Scanner.PurgeMissing = "always";
     };
   };
 
@@ -519,7 +513,7 @@ in
 
     nixServeServer = sslServer {
       serverName = "cache.lifeym.xyz";
-      proxyPassAddr = "${config.services.nix-serve.bindAddress}:${toString config.services.nix-serve.port}";
+      proxyPassAddr = "${config.services.ncps.server.addr}";
     };
 
     navidromeServer = sslServer {
@@ -571,6 +565,91 @@ in
         listen ${serverAddr.web}:22;
         proxy_pass ${localAddr.gitea}:2222;
       }
+    '';
+  };
+
+  services.ncps = {
+    enable = true;
+    server.addr = "localhost:8501";
+    cache = {
+      hostName = "cache.lifeym.xyz";
+      maxSize = "300G";
+      lru.schedule = "0 2 * * *";  # Daily at 2 AM
+      storage.local = "/mnt/data/lib/ncps";
+      upstream = {
+        urls = [
+          "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
+          "https://mirrors.ustc.edu.cn/nix-channels/store"
+          "https://mirror.sjtu.edu.cn/nix-channels/store"
+          "https://cache.nixos.org"
+        ];
+        publicKeys = [ "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" ];
+      };
+    };
+  };
+
+  services.fail2ban = {
+    enable = true;
+    bantime = "1h";
+    maxretry = 5;
+    ignoreIP = [ "127.0.0.1/8" "192.168.0.0/23" ];
+
+    jails = {
+      sshd.settings = {
+        enabled = true;
+        port = "ssh";
+        findtime = 600;
+      };
+
+      nginx-noscript.settings = {
+        enabled = true;
+        port = "http,https";
+        filter = "nginx-noscript";
+        logpath = "/var/log/nginx/access.log";
+        findtime = 600;
+      };
+
+      nginx-badbots.settings = {
+        enabled = true;
+        port = "http,https";
+        filter = "nginx-badbots";
+        logpath = "/var/log/nginx/access.log";
+        findtime = 600;
+      };
+
+      gitea-auth.settings = {
+        enabled = true;
+        port = "http,https";
+        filter = "gitea-auth";
+        logpath = "/var/log/nginx/access.log";
+        maxretry = 3;
+        findtime = 600;
+      };
+
+      web-unauthorized.settings = {
+        enabled = true;
+        port = "http,https";
+        filter = "nginx-unauthorized";
+        logpath = "/var/log/nginx/access.log";
+        findtime = 600;
+      };
+    };
+  };
+
+  environment.etc = {
+    "fail2ban/filter.d/nginx-noscript.conf".text = ''
+      [Definition]
+      failregex = ^<HOST> -.*"GET .*\.(php|asp|exe|pl|sh) HTTP/.*" (404|403)
+    '';
+
+    "fail2ban/filter.d/nginx-unauthorized.conf".text = ''
+      [Definition]
+      failregex = ^<HOST> -.*"POST .* HTTP/.*" 401
+    '';
+
+    "fail2ban/filter.d/gitea-auth.conf".text = ''
+      [Definition]
+      failregex = ^<HOST> -.*"POST /user/login HTTP/.*" (400|403)
     '';
   };
 
