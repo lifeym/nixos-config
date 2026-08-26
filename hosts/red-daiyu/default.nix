@@ -476,6 +476,10 @@ in
         safe_search = {
           enabled = false;  # Enforcing "Safe search" option for search engines, when possible.
         };
+
+        rewrites = [
+          { domain = "*.lifeym.xyz"; answer = "${serverAddr.web}"; }
+        ];
       };
       # The following notation uses map
       # to not have to manually create {enabled = true; url = "";} for every filter
