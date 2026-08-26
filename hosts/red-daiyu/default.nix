@@ -435,6 +435,61 @@ in
   #   instances.home.configFile = "/mnt/data/lib/easytier/home.conf";
   # };
 
+  services.adguardhome = {
+    enable = true;
+    host = "127.0.0.1";
+    # port = 3003;
+    settings = {
+      dns = {
+        enable_dnssec = true;
+        bind_hosts = [
+          "${serverAddr.red-daiyu}"
+        ];
+        upstream_dns = [
+          "https://dns.alidns.com/dns-query"
+          "https://doh.pub/dns-query" # dnspod
+          "https://unfiltered.adguard-dns.com/dns-query"
+          # Uncomment the following to use a local DNS service (e.g. Unbound)
+          # Additionally replace the address & port as needed
+          # "127.0.0.1:5335"
+        ];
+        bootstrap_dns = [
+          "223.5.5.5" # ali
+          "119.29.29.29" # tencent
+          "114.114.114.114"
+        ];
+
+        upstream_mode = "parallel";
+
+        # cache settings
+        cache_enabled = true;
+        cache_size = 67108864; # 64M
+        cache_ttl_min = 1800;  # 30 min
+        cache_ttl_max = 86400; # 1 day
+      };
+
+      filtering = {
+        protection_enabled = true;
+        filtering_enabled = true;
+
+        parental_enabled = false;  # Parental control-based DNS requests filtering.
+        safe_search = {
+          enabled = false;  # Enforcing "Safe search" option for search engines, when possible.
+        };
+      };
+      # The following notation uses map
+      # to not have to manually create {enabled = true; url = "";} for every filter
+      # This is, however, fully optional
+      filters = map(url: { enabled = true; url = url; }) [
+        "https://adguardteam.github.io/HostlistsRegistry/assets/filter_9.txt"  # The Big List of Hacked Malware Web Sites
+        "https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt"  # malicious url blocklist
+        "https://github.com/vickai/AdGuardSDNSFilter/raw/refs/heads/main/rules/adblockgambling.txt"
+        "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.txt"
+        "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareAdGuardHome.txt"
+      ];
+    };
+  };
+
   services.restic.backups = {
     red-daiyu = {
       initialize = true;
@@ -521,6 +576,11 @@ in
       serverName = "aud.lifeym.xyz";
       proxyPassAddr = "${config.services.navidrome.settings.Address}:${toString config.services.navidrome.settings.Port}";
     };
+
+    adguardhomeServer = sslServer {
+      serverName = "dns.lifeym.xyz";
+      proxyPassAddr = "${config.services.adguardhome.host}:${toString config.services.adguardhome.port}";
+    };
   in {
     enable = true;
     recommendedProxySettings = true;
@@ -546,6 +606,8 @@ in
       ${nixServeServer}
 
       ${navidromeServer}
+
+      ${adguardhomeServer}
     '';
 
     streamConfig = ''
@@ -672,13 +734,16 @@ in
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [
+      53 # adguardhome
       80
       443
       3306 # mysql
       11010 # easytier
       proxyCfg.port # v2ray
     ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
-    # allowedUDPPorts = [ ... ];
+    allowedUDPPorts = [
+      53 # adguardhome
+    ];
   };
 
   # xray systemd service
