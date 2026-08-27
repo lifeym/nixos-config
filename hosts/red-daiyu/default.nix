@@ -430,10 +430,10 @@ in
     };
   };
 
-  # services.easytier = {
-  #   enable = true;
-  #   instances.home.configFile = "/mnt/data/lib/easytier/home.conf";
-  # };
+  services.easytier = {
+    enable = true;
+    instances.home.configFile = "/mnt/data/lib/easytier/home.conf";
+  };
 
   services.adguardhome = {
     enable = true;
@@ -449,9 +449,13 @@ in
           "https://dns.alidns.com/dns-query"
           "https://doh.pub/dns-query" # dnspod
           "https://unfiltered.adguard-dns.com/dns-query"
+          "[/lan/]192.168.0.1"
           # Uncomment the following to use a local DNS service (e.g. Unbound)
           # Additionally replace the address & port as needed
           # "127.0.0.1:5335"
+        ];
+        local_ptr_upstreams = [
+          "192.168.0.1"
         ];
         bootstrap_dns = [
           "223.5.5.5" # ali
@@ -466,6 +470,8 @@ in
         cache_size = 67108864; # 64M
         cache_ttl_min = 1800;  # 30 min
         cache_ttl_max = 86400; # 1 day
+
+        hostsfile_enabled = true; # Allows information from the system hosts file to be used to resolve queries.
       };
 
       filtering = {
@@ -477,8 +483,16 @@ in
           enabled = false;  # Enforcing "Safe search" option for search engines, when possible.
         };
 
-        rewrites = [
-          { domain = "*.lifeym.xyz"; answer = "${serverAddr.web}"; }
+        rewrites = (map(subdomain: { domain = "${subdomain}.lifeym.xyz"; answer = "${serverAddr.web}"; enabled = true; }) [
+          "aud"
+          "cache"
+          "ci"
+          "cwa"
+          "dns"
+          "git"
+          "hub"
+        ]) ++ [
+          { domain = "red-daiyu.lan"; answer = "${serverAddr.red-daiyu}"; enabled = true; }
         ];
       };
       # The following notation uses map
@@ -491,6 +505,14 @@ in
         "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.txt"
         "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareAdGuardHome.txt"
       ];
+
+      clients.runtime_sources = {
+        whois = false;
+        arp = true;
+        rdns = true;
+        dhcp = false; # donot use agh's dhcp
+        hosts = true;
+      };
     };
   };
 
