@@ -440,6 +440,7 @@ in
     host = "127.0.0.1";
     # port = 3003;
     settings = {
+      http_proxy = "http://192.168.0.6:10809";
       dns = {
         enable_dnssec = true;
         bind_hosts = [
