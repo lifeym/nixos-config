@@ -40,6 +40,7 @@ in
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
+    ./srv/paperless.nix
   ];
 
   # Enable OpenGL
@@ -492,6 +493,7 @@ in
           "dns"
           "git"
           "hub"
+          "paperless"
         ]) ++ [
           { domain = "red-daiyu.lan"; answer = "${serverAddr.red-daiyu}"; enabled = true; }
         ];
@@ -608,6 +610,11 @@ in
       serverName = "dns.lifeym.xyz";
       proxyPassAddr = "${config.services.adguardhome.host}:${toString config.services.adguardhome.port}";
     };
+
+    paperlessServer = sslServer {
+      serverName = "paperless.lifeym.xyz";
+      proxyPassAddr = "${config.services.paperless.address}:${toString config.services.paperless.port}";
+    };
   in {
     enable = true;
     recommendedProxySettings = true;
@@ -635,6 +642,8 @@ in
       ${navidromeServer}
 
       ${adguardhomeServer}
+
+      ${paperlessServer}
     '';
 
     streamConfig = ''
