@@ -1,10 +1,11 @@
-{ config, pkgs, ... }:
+{ config, pkgs-unstable, ... }:
 {
   services.paperless = {
     enable = true;
+    environmentFile = config.sops.templates."paperless-secret-key".path;
     consumptionDirIsPublic = true;
     dataDir = "/mnt/data/lib/paperless";
-    # domain = "paperless.lifeym.xyz";
+    domain = "paperless.lifeym.xyz";
     # address = "127.0.0.1";
     # port = 28981;
     settings = {
@@ -18,7 +19,8 @@
         optimize = 1;
         pdfa_image_compression = "lossless";
       };
-      PAPERLESS_URL = "https://paperless.lifeym.xyz";
     };
+
+    package = pkgs-unstable.paperless-ngx;
   };
 }

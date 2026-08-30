@@ -31,7 +31,7 @@ let
   proxyCfg = {
     httpProxy = "${serverAddr.red-daiyu}:10809";
     port = 10809;
-    noProxy = "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
+    noProxy = "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,lifeym.xyz,baidu.com,edu.cn";
   };
 
   statePath = rel: "/mnt/data/lib/${rel}";
@@ -41,6 +41,8 @@ in
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
     ./srv/paperless.nix
+    ./srv/msmtp.nix
+    ./srv/transmission.nix
   ];
 
   # Enable OpenGL
@@ -91,10 +93,37 @@ in
 
   # mdadm raid
   # Or use environment.etc."mdadm.conf" instead.
-  boot.swraid = {
+  boot.swraid = let
+    appTokenFile = config.sops.secrets."pushover/apps/red-daiyu".path;
+    userKeyFile = config.sops.secrets."pushover/user-key".path;
+
+    # Create a lightweight shell script to parse mdadm event details
+    mdadmPushoverAlert = pkgs.writeShellScript "mdadm-pushover" ''
+      EVENT="$1"
+      DEVICE="$2"
+      COMPONENT="$3"
+
+      # Construct a descriptive message payload
+      MESSAGE="MDADM Event: $EVENT detected on $DEVICE"
+      if [ -n "$COMPONENT" ]; then
+        MESSAGE="$MESSAGE (Component affected: $COMPONENT)"
+      fi
+
+      # Dispatch to Pushover API
+      ${pkgs.curl}/bin/curl -s https://api.pushover.net/1/messages.json \
+        -F "token=$(cat ${appTokenFile})" \
+        -F "user=$(cat ${userKeyFile})" \
+        -F "title=⚠️ RAID Alert - $(hostname)" \
+        -F "message=$MESSAGE" \
+        -F "priority=1" \
+    '';
+  in {
     enable = true;
     mdadmConf = ''
-    ARRAY /dev/md/openSUSE:1 metadata=1.2 UUID=890c5d74:2a8b8f7f:01c80f44:f4ed2786
+      ARRAY /dev/md/openSUSE:1 metadata=1.2 UUID=890c5d74:2a8b8f7f:01c80f44:f4ed2786
+      MAILADDR 8r92uvybh6@pomail.net
+      MAILFROM lifeym@qq.com
+      PROGRAM ${mdadmPushoverAlert}
     '';
   };
 
@@ -222,7 +251,14 @@ in
       "repo/red-daiyu/path" = {};
       "db/mariadb/user" = {};
       "db/mariadb/password" = {};
+      "smtp/token" = {};
+      "paperless-secret-key" = {};
+      "pushover/apps/red-daiyu" = {};
+      "pushover/user-key" = {};
     };
+    templates."paperless-secret-key".content = ''
+      PAPERLESS_SECRET_KEY="${config.sops.placeholder.paperless-secret-key}"
+    '';
   };
 
   # List packages installed in system profile. To search, run:
@@ -487,6 +523,7 @@ in
 
         rewrites = (map(subdomain: { domain = "${subdomain}.lifeym.xyz"; answer = "${serverAddr.web}"; enabled = true; }) [
           "aud"
+          "bt"
           "cache"
           "ci"
           "cwa"
@@ -615,6 +652,11 @@ in
       serverName = "paperless.lifeym.xyz";
       proxyPassAddr = "${config.services.paperless.address}:${toString config.services.paperless.port}";
     };
+
+    btServer = sslServer {
+      serverName = "bt.lifeym.xyz";
+      proxyPassAddr = "${config.services.transmission.settings.rpc-bind-address}:${toString config.services.transmission.settings.rpc-port}";
+    };
   in {
     enable = true;
     recommendedProxySettings = true;
@@ -644,6 +686,8 @@ in
       ${adguardhomeServer}
 
       ${paperlessServer}
+
+      ${btServer}
     '';
 
     streamConfig = ''
