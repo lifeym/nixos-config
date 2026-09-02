@@ -24,6 +24,8 @@ in
     ./svc/msmtp.nix
     ./svc/transmission.nix
     ./svc/grocy.nix
+    ./svc/mealie.nix
+    ./svc/einvault.nix
   ];
 
   # Enable OpenGL
@@ -509,6 +511,9 @@ in
           "git"
           "hub"
           "paperless"
+          "grocy"
+          "meal"
+          "paw"
         ]) ++ [
           { domain = "red-daiyu.lan"; answer = "${consts.roles.red-daiyu}"; enabled = true; }
         ];
@@ -837,6 +842,7 @@ in
 
     gitea = {
       image = "docker.gitea.com/gitea:1.27-rootless";
+      pull = "newer";
       dependsOn = [ "mariadb" ];
       autoStart = true;
       networks = [ "nas" ];
@@ -906,6 +912,15 @@ in
       ];
     };
   };
+
+  environment.etc."containers/containers.conf.d/proxy.conf".text = ''
+    [engine]
+    env = [
+      "HTTP_PROXY=${consts.proxyCfg.httpProxy}",
+      "HTTPS_PROXY=${consts.proxyCfg.httpProxy}",
+      "NO_PROXY=${consts.proxyCfg.noProxy}"
+    ]
+  '';
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you

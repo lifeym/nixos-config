@@ -29,15 +29,15 @@ rec {
     registry-ui = { addr = "10.33.0.20"; port = 80; };
     registry-server = { addr = "10.33.0.21"; port = 5000; };
     einvault = { addr = "10.33.0.25"; port = 3000; };
+    grocy = { addr = "10.33.0.26"; port = 80; };
+    mealie = { addr = "10.33.0.27"; port = 9000; };
 
     # localhost services
     adguardhome = mkLocalSvc 3003;
     navidrome = mkLocalSvc 4533;
     woodpecker-server = mkLocalSvc 8000;
     ncps = mkLocalSvc 8501;
-    mealie = mkLocalSvc 9000;
     transmission = mkLocalSvc 9091;
-    grocy = mkLocalSvc 9283;
     paperless = mkLocalSvc 28981;
   };
   mydomain = "lifeym.xyz";
@@ -106,7 +106,12 @@ rec {
       };
       "paw.${mydomain}" = {
         target = "einvault";
-        extraConfig = "client_max_body_size 0;"; # can upload video?
+        extraConfig = ''
+          client_max_body_size 0;
+          proxy_buffer_size          128k;
+          proxy_buffers              4 256k;
+          proxy_busy_buffers_size    256k;
+        ''; # can upload video?
       };
     };
     streams = {
