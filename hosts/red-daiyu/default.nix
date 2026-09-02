@@ -19,9 +19,11 @@ in
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ./srv/paperless.nix
-    ./srv/msmtp.nix
-    ./srv/transmission.nix
+    ./svc/nginx.nix
+    ./svc/paperless.nix
+    ./svc/msmtp.nix
+    ./svc/transmission.nix
+    ./svc/grocy.nix
   ];
 
   # Enable OpenGL
@@ -157,12 +159,7 @@ in
     networks = {
       "20-dhcp-br0" = {
         matchConfig.Name = "br0";
-        address = [
-          "${consts.serverAddr.red-daiyu}/23"
-          "${consts.serverAddr.web}/24" # web
-          "${consts.serverAddr.mariadb}/24" # mysql
-          "${consts.serverAddr.cjf-mariadb}/24" # mysql
-        ];
+        address = consts.networkAddress;
         dns = [
           "192.168.0.1"
           # "114.114.114.114"
@@ -306,8 +303,8 @@ in
   services.openssh = {
     enable = true;
     openFirewall = true; # Open the firewall for SSH connections.
-    listenAddresses = [
-      { addr = consts.serverAddr.red-daiyu; }
+    listenAddresses = with consts.services.openssh; [
+      { inherit addr port; }
     ];
     settings = {
       PermitRootLogin = "no"; # Disable root login via SSH.
@@ -319,9 +316,9 @@ in
   # navidrome
   services.navidrome = {
     enable = true;
-    settings = {
-      Address = "localhost";
-      Port = 4533;
+    settings = with consts.services.navidrome; {
+      Address = addr;
+      Port = port;
       MusicFolder = "/mnt/data/media/music";
       DataFolder = "${consts.statePath}navidrome";
       ScanSchedule = "@every 30m";
@@ -342,7 +339,7 @@ in
         "server string" = "Lifeym's Home Lab Samba Server";
         "netbios name" = "smbnix";
         "security" = "user";
-        "interfaces" = "${consts.serverAddr.red-daiyu}";
+        "interfaces" = "${consts.roles.red-daiyu}";
         "bind interfaces only" = "yes";
         "use sendfile" = "yes";
         "hosts allow" = "192.168.0. 127.0.0.1 localhost";
@@ -401,12 +398,12 @@ in
     enable = true;
 
     # 基礎環境配置
-    environment = {
+    environment = with consts.services.woodpecker-server; {
       # Server fully qualified URL of the user-facing hostname, port (if not default for HTTP/HTTPS) and path prefix.
       WOODPECKER_HOST = "https://ci.${consts.mydomain}";
 
       # Configures the HTTP listener, supports unix socket via unix:// prefix".
-      WOODPECKER_SERVER_ADDR = ":${toString consts.localPorts.woodpecker}";
+      WOODPECKER_SERVER_ADDR = "${addr}:${toString port}";
 
       # Enable to allow user registration.
       WOODPECKER_OPEN = "true";
@@ -430,12 +427,12 @@ in
   };
 
   #  Woodpecker Agent / Runner
-  services.woodpecker-agents = {
+  services.woodpecker-agents = with consts.services.woodpecker-server; {
     agents = {
       "local-runner" = {
         enable = true;
         environment = {
-          WOODPECKER_SERVER = "localhost:${toString consts.localPorts.woodpecker}"; # 連接本機 Server
+          WOODPECKER_SERVER = "${addr}:${toString port}"; # 連接本機 Server
           WOODPECKER_MAX_WORKERS = "4";         # 同時並發的構建任務數
 
           # 告訴 Runner 使用本機的 Podman/Docker 套接字來創建 CI 容器
@@ -453,16 +450,16 @@ in
     instances.home.configFile = "${consts.statePath}easytier/home.conf";
   };
 
-  services.adguardhome = {
+  services.adguardhome = with consts.services.adguardhome; {
     enable = true;
-    host = "127.0.0.1";
-    # port = 3003;
+    host = addr;
+    inherit port;
     settings = {
-      http_proxy = "http://192.168.0.6:10809";
+      http_proxy = consts.proxyCfg.httpProxy;
       dns = {
         enable_dnssec = true;
         bind_hosts = [
-          "${consts.serverAddr.red-daiyu}"
+          "${consts.roles.red-daiyu}"
         ];
         upstream_dns = [
           "https://dns.alidns.com/dns-query"
@@ -502,7 +499,7 @@ in
           enabled = false;  # Enforcing "Safe search" option for search engines, when possible.
         };
 
-        rewrites = (map(subdomain: { domain = "${subdomain}.${consts.mydomain}"; answer = "${consts.serverAddr.web}"; enabled = true; }) [
+        rewrites = (map(subdomain: { domain = "${subdomain}.${consts.mydomain}"; answer = "${consts.roles.web}"; enabled = true; }) [
           "aud"
           "bt"
           "cache"
@@ -513,7 +510,7 @@ in
           "hub"
           "paperless"
         ]) ++ [
-          { domain = "red-daiyu.lan"; answer = "${consts.serverAddr.red-daiyu}"; enabled = true; }
+          { domain = "red-daiyu.lan"; answer = "${consts.roles.red-daiyu}"; enabled = true; }
         ];
       };
       # The following notation uses map
@@ -574,122 +571,6 @@ in
       # Server URL
       repositoryFile = config.sops.secrets."repo/red-daiyu/path".path;
     };
-  };
-
-  services.nginx = let
-    sslServer = { serverName, extraConfig ? "", proxyPassAddr }: ''
-      server {
-        listen ${consts.serverAddr.web}:443 ssl ;
-        server_name ${serverName} ;
-        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
-        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
-        location / {
-          ${extraConfig}
-          proxy_pass http://${proxyPassAddr};
-        }
-        if ($server_name != $host) {
-          return 301 https://$server_name$request_uri;
-        }
-      }
-    '';
-
-    giteaServer = sslServer {
-      serverName = "git.lifeym.xyz";
-      extraConfig = "client_max_body_size 1G;";
-      proxyPassAddr = "${consts.containerAddr.gitea}:3000";
-    };
-
-    woodpeckerServer = sslServer {
-      serverName = "ci.lifeym.xyz";
-      proxyPassAddr = "localhost:8000";
-    };
-
-    dockerRegistryServer = sslServer {
-      serverName = "hub.lifeym.xyz";
-      proxyPassAddr = "${consts.containerAddr.registry-ui}:80";
-    };
-
-    cwaServer = sslServer {
-      serverName = "cwa.lifeym.xyz";
-      proxyPassAddr = "${consts.containerAddr.cwa}:8083";
-    };
-
-    nixServeServer = sslServer {
-      serverName = "cache.lifeym.xyz";
-      proxyPassAddr = "${config.services.ncps.server.addr}";
-    };
-
-    navidromeServer = sslServer {
-      serverName = "aud.lifeym.xyz";
-      proxyPassAddr = "${config.services.navidrome.settings.Address}:${toString config.services.navidrome.settings.Port}";
-    };
-
-    adguardhomeServer = sslServer {
-      serverName = "dns.lifeym.xyz";
-      proxyPassAddr = "${config.services.adguardhome.host}:${toString config.services.adguardhome.port}";
-    };
-
-    paperlessServer = sslServer {
-      serverName = "paperless.lifeym.xyz";
-      proxyPassAddr = "${config.services.paperless.address}:${toString config.services.paperless.port}";
-    };
-
-    btServer = sslServer {
-      serverName = "bt.lifeym.xyz";
-      proxyPassAddr = "${config.services.transmission.settings.rpc-bind-address}:${toString config.services.transmission.settings.rpc-port}";
-    };
-  in {
-    enable = true;
-    recommendedProxySettings = true;
-    recommendedOptimisation = true;
-    recommendedTlsSettings = true;
-    appendHttpConfig = ''
-      server {
-        listen 80;
-        server_name _;
-        location / {
-          return 301 https://$host$request_uri;
-        }
-      }
-
-      ${giteaServer}
-
-      ${woodpeckerServer}
-
-      ${dockerRegistryServer}
-
-      ${cwaServer}
-
-      ${nixServeServer}
-
-      ${navidromeServer}
-
-      ${adguardhomeServer}
-
-      ${paperlessServer}
-
-      ${btServer}
-    '';
-
-    streamConfig = ''
-      # mariadb
-      server {
-        listen ${consts.serverAddr.mariadb}:3306;
-        proxy_pass ${consts.containerAddr.mariadb}:3306;
-      }
-
-      # cjf-mariadb
-      server {
-        listen ${consts.serverAddr.cjf-mariadb}:3306;
-        proxy_pass ${consts.containerAddr.cjf-mariadb}:3306;
-      }
-
-      # gitea
-      server {
-        listen ${consts.serverAddr.web}:22;
-        proxy_pass ${consts.containerAddr.gitea}:2222;
-      }
-    '';
   };
 
   services.ncps = {
@@ -912,7 +793,7 @@ in
         "/mnt/data/calibre-library:/calibre-library"
       ];
       extraOptions = [
-        "--ip=${consts.containerAddr.cwa}"
+        "--ip=${consts.services.cwa.addr}"
       ];
     };
 
@@ -931,7 +812,7 @@ in
         "${consts.statePath}mariadb/conf.d:/etc/mysql/conf.d:ro"
       ];
       extraOptions = [
-        "--ip=${consts.containerAddr.mariadb}"
+        "--ip=${consts.services.mariadb.addr}"
       ];
     };
 
@@ -950,7 +831,7 @@ in
         "${consts.statePath}cjf/mariadb/conf.d:/etc/mysql/conf.d:ro"
       ];
       extraOptions = [
-        "--ip=${consts.containerAddr.cjf-mariadb}"
+        "--ip=${consts.services.cjf-mariadb.addr}"
       ];
     };
 
@@ -974,7 +855,7 @@ in
         "${consts.statePath}gitea/config:/etc/gitea"
       ];
       extraOptions = [
-        "--ip=${consts.containerAddr.gitea}"
+        "--ip=${consts.services.gitea.addr}"
       ];
     };
 
@@ -1000,7 +881,7 @@ in
         "/etc/localtime:/etc/localtime:ro"
       ];
       extraOptions = [
-        "--ip=${consts.containerAddr.registry-ui}"
+        "--ip=${consts.services.registry-ui.addr}"
       ];
     };
 
@@ -1021,7 +902,7 @@ in
         "${consts.statePath}docker_registry/data:/var/lib/registry"
       ];
       extraOptions = [
-        "--ip=${consts.containerAddr.registry-server}"
+        "--ip=${consts.services.registry-server.addr}"
       ];
     };
   };
