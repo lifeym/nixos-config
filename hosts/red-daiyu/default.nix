@@ -452,93 +452,6 @@ in
     instances.home.configFile = "${consts.statePath}easytier/home.conf";
   };
 
-  services.adguardhome = with consts.services.adguardhome; {
-    enable = true;
-    host = addr;
-    inherit port;
-    settings = {
-      http_proxy = consts.proxyCfg.httpProxy;
-      dns = {
-        enable_dnssec = true;
-        bind_hosts = [
-          "${consts.roles.red-daiyu}"
-        ];
-        upstream_dns = [
-          "https://dns.alidns.com/dns-query"
-          "https://doh.pub/dns-query" # dnspod
-          "https://unfiltered.adguard-dns.com/dns-query"
-          "[/lan/]192.168.0.1"
-          # Uncomment the following to use a local DNS service (e.g. Unbound)
-          # Additionally replace the address & port as needed
-          # "127.0.0.1:5335"
-        ];
-        local_ptr_upstreams = [
-          "192.168.0.1"
-        ];
-        bootstrap_dns = [
-          "223.5.5.5" # ali
-          "119.29.29.29" # tencent
-          "114.114.114.114"
-        ];
-
-        upstream_mode = "parallel";
-
-        # cache settings
-        cache_enabled = true;
-        cache_size = 67108864; # 64M
-        cache_ttl_min = 1800;  # 30 min
-        cache_ttl_max = 86400; # 1 day
-
-        hostsfile_enabled = true; # Allows information from the system hosts file to be used to resolve queries.
-      };
-
-      filtering = {
-        protection_enabled = true;
-        filtering_enabled = true;
-
-        parental_enabled = false;  # Parental control-based DNS requests filtering.
-        safe_search = {
-          enabled = false;  # Enforcing "Safe search" option for search engines, when possible.
-        };
-
-        rewrites = (map(subdomain: { domain = "${subdomain}.${consts.mydomain}"; answer = "${consts.roles.web}"; enabled = true; }) [
-          "aud"
-          "bt"
-          "cache"
-          "ci"
-          "cwa"
-          "dns"
-          "git"
-          "hub"
-          "paperless"
-          "grocy"
-          "meal"
-          "paw"
-        ]) ++ [
-          { domain = "red-daiyu.lan"; answer = "${consts.roles.red-daiyu}"; enabled = true; }
-        ];
-      };
-      # The following notation uses map
-      # to not have to manually create {enabled = true; url = "";} for every filter
-      # This is, however, fully optional
-      filters = map(url: { enabled = true; url = url; }) [
-        "https://adguardteam.github.io/HostlistsRegistry/assets/filter_9.txt"  # The Big List of Hacked Malware Web Sites
-        "https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt"  # malicious url blocklist
-        "https://github.com/vickai/AdGuardSDNSFilter/raw/refs/heads/main/rules/adblockgambling.txt"
-        "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/tif.txt"
-        "https://raw.githubusercontent.com/DandelionSprout/adfilt/master/Alternate%20versions%20Anti-Malware%20List/AntiMalwareAdGuardHome.txt"
-      ];
-
-      clients.runtime_sources = {
-        whois = false;
-        arp = true;
-        rdns = true;
-        dhcp = false; # donot use agh's dhcp
-        hosts = true;
-      };
-    };
-  };
-
   services.restic.backups = {
     red-daiyu = {
       initialize = true;
@@ -681,16 +594,12 @@ in
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [
-      53 # adguardhome
       80
       443
       3306 # mysql
       11010 # easytier
       consts.proxyCfg.port # v2ray
     ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
-    allowedUDPPorts = [
-      53 # adguardhome
-    ];
   };
 
   # xray systemd service

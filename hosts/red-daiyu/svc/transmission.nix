@@ -1,4 +1,8 @@
 { config, pkgs, ... }:
+
+let
+  c = import ../consts.nix;
+in
 {
   services.transmission = {
     enable = true;
@@ -20,7 +24,6 @@
       # 3. 登录 Web 界面的账号密码
       "rpc-authentication-required" = true;
       "rpc-username" = "admin";
-      "rpc-password" = "password"; # 首次启动后，Samba/Transmission 会自动将其加密哈希化
 
       # 4. 性能与连接优化（非常适合 PT/BT 挂机）
       "peer-limit-global" = 500;
@@ -29,6 +32,8 @@
       "dht-enabled" = true;
       "utp-enabled" = true;
     };
+
+    credentialsFile = "${c.statePath}transmission/settings.json";
 
     package = pkgs.transmission_4;
   };

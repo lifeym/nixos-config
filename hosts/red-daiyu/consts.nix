@@ -33,7 +33,6 @@ rec {
     mealie = { addr = "10.33.0.27"; port = 9000; };
 
     # localhost services
-    adguardhome = mkLocalSvc 3003;
     navidrome = mkLocalSvc 4533;
     woodpecker-server = mkLocalSvc 8000;
     ncps = mkLocalSvc 8501;
@@ -77,9 +76,6 @@ rec {
       "cwa.${mydomain}" = {
         target = "cwa";
         extraLocationConfig = "client_max_body_size 100m;";
-      };
-      "dns.${mydomain}" = {
-        target = "adguardhome";
       };
       "git.${mydomain}" = {
         target = "gitea";
