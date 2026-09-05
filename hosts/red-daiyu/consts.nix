@@ -1,26 +1,22 @@
 # This file contains AttrSet Only.
+let
+  ipv6ULA = "fd33:2023:e125";
+in
 rec {
   roles = {
-    red-daiyu = "192.168.0.6";
-    web = "192.168.0.70";
-    mariadb = "192.168.0.71";
-    cjf-mariadb = "192.168.0.73";
+    red-daiyu = { ipv4 = "192.168.0.6"; ipv6 = "${ipv6ULA}::6"; };
+    web = { ipv4 = "192.168.0.70"; ipv6 = "${ipv6ULA}::70"; };
+    mariadb = { ipv4 = "192.168.0.71"; ipv6 = "${ipv6ULA}::71"; };
+    cjf-mariadb = { ipv4 = "192.168.0.73"; ipv6 = "${ipv6ULA}::73"; };
   };
   # no lib.mapAttrsToList, use builtins.map instead
-  networkAddress = builtins.map (name: (k: v:
-    if k == "red-daiyu" then
-      "${v}/23"
-    else
-      "${v}/24"
-    ) name roles.${name}) (builtins.attrNames roles);
+  networkAddress = builtins.concatMap (service: [
+    "${service.ipv4}/24"
+    "${service.ipv6}/64"
+  ]) (builtins.attrValues roles);
   services = let
-    mkServerSvc = port: { addr = "192.168.0.6"; inherit port; };
     mkLocalSvc = port: { addr = "127.0.0.1"; inherit port; };
   in {
-    # red-daiyu services
-    openssh = mkServerSvc 22;
-    samba = mkServerSvc null;
-
     # container services
     mariadb = { addr = "10.33.0.3"; port = 3306; };
     cjf-mariadb = { addr = "10.33.0.4"; port = 3306; };
@@ -40,9 +36,7 @@ rec {
     paperless = mkLocalSvc 28981;
   };
   mydomain = "lifeym.xyz";
-  nginx = let
-    mkSvcTarget = svcName: let svc = services.${svcName}; in "${svc.addr}:${toString svc.port}";
-  in {
+  nginx = {
     vhosts = {
       "aud.${mydomain}" = {
         target = "navidrome";
@@ -110,10 +104,25 @@ rec {
         ''; # can upload video?
       };
     };
-    streams = {
-      "${roles.mariadb}:${toString services.mariadb.port}" = { target = mkSvcTarget "mariadb"; };
-      "${roles.cjf-mariadb}:${toString services.cjf-mariadb.port}" = { target = mkSvcTarget "cjf-mariadb"; };
-      "${roles.web}:22" = { target = "${services.gitea.addr}:2222"; };
+    streams = { # target addr:port = listen list[]
+      "${services.mariadb.addr}:${toString services.mariadb.port}" = {
+        listen = [
+          "${roles.mariadb.ipv4}:${toString services.mariadb.port}"
+          "[${roles.mariadb.ipv6}]:${toString services.mariadb.port}"
+        ];
+      };
+      "${services.cjf-mariadb.addr}:${toString services.cjf-mariadb.port}" = {
+        listen = [
+          "${roles.cjf-mariadb.ipv4}:${toString services.cjf-mariadb.port}"
+          "[${roles.cjf-mariadb.ipv6}]:${toString services.cjf-mariadb.port}"
+        ];
+      };
+      "${services.gitea.addr}:2222" = {
+        listen = [
+          "${roles.web.ipv4}:22"
+          "[${roles.web.ipv6}]:22"
+        ];
+      };
     };
   };
   proxyCfg = {

@@ -19,9 +19,20 @@ in
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    ./svc/nginx.nix
-    ./svc/paperless.nix
+
+    # 基础设施
     ./svc/msmtp.nix
+    ./svc/ncps.nix
+    ./svc/samba.nix
+    ./svc/nginx.nix
+    ./svc/fail2ban.nix
+    ./svc/easytier.nix
+    ./svc/restic.nix
+
+    # apps
+    ./svc/woodpecker.nix
+    ./svc/navidrome.nix
+    ./svc/paperless.nix
     ./svc/transmission.nix
     ./svc/grocy.nix
     ./svc/mealie.nix
@@ -36,10 +47,25 @@ in
     enable32Bit = true;
   };
 
+  services.lvm.enable = true;
   boot.initrd.kernelModules = [
+    "dm-cache"
+    "dm-cache-smq"
+    "dm-persistent-data"
     "dm-snapshot"
     "dm-cache-default" # when using volumes set up with lvmcache
   ];
+
+  environment.etc."lvm/lvm.conf.d/cache-activation-fix.conf".text = ''
+    activation {
+      udev_sync = 0
+      udev_rules = 0
+    }
+
+    devices {
+      obtain_device_list_from_udev = 0
+    }
+  '';
 
   # load tcp_bbr module for enabling bbr in sysctl.
   boot.kernelModules = [ "tcp_bbr" ];
@@ -115,21 +141,52 @@ in
   fileSystems."/mnt/data" = {
     device = "/dev/disk/by-uuid/9734a151-32f3-4986-ba99-d560d4bb572b";
     fsType = "xfs";
+    options = [
+      "nofail"
+      "noatime"
+      "nodev"
+      "defaults"
+    ];
   };
 
-  fileSystems."/mnt/store" = {
-    device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
-    fsType = "xfs";
-  };
+  # fileSystems."/mnt/store" = {
+  #   device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
+  #   fsType = "xfs";
+  #   options = [
+  #     "nofail"
+  #     "x-systemd.automount" # 按需挂载
+  #     "x-systemd.idle-timeout=60s"
+  #     "x-systemd.device-timeout=30s"
+  #     "defaults"
+  #   ];
+  # };
 
   fileSystems."/mnt/downloads" = {
     device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
     fsType = "xfs";
+    options = [
+      "nofail"
+      "noatime"
+      "nodev"
+      "x-systemd.automount" # 按需挂载
+      "x-systemd.idle-timeout=60s"
+      "x-systemd.device-timeout=30s"
+      "defaults"
+    ];
   };
 
   fileSystems."/mnt/fast" = {
     device = "/dev/disk/by-uuid/2ae126bf-962e-4a4c-b292-f60e65e9eec5";
     fsType = "ext4";
+    options = [
+      "nofail"
+      "noatime"
+      "nodev"
+      "x-systemd.automount" # 按需挂载
+      "x-systemd.idle-timeout=60s"
+      "x-systemd.device-timeout=30s"
+      "defaults"
+    ];
   };
 
   # Use the systemd-boot EFI boot loader.
@@ -162,16 +219,28 @@ in
       "20-dhcp-br0" = {
         matchConfig.Name = "br0";
         address = consts.networkAddress;
-        dns = [
-          "192.168.0.1"
-          # "114.114.114.114"
-        ];
-        # networkConfig = {
-        #   DHCP = "yes";
-        # };
+        networkConfig = {
+          # DHCP = "ipv4"; # use ipv4 only. ipv6 uses ipv6RA, not dhcpv6
+          IPv4Forwarding = true;
+          # IPv6Forwarding = true;
+          IPv6AcceptRA = true;
+          IPv6PrivacyExtensions = false; # keep the audit clean...
+          DNS = [
+            "192.168.0.1"
+            "114.114.114.114"
+          ];
+        };
+
         routes = [
           { Gateway = "192.168.0.1"; }
         ];
+
+        ipv6AcceptRAConfig = {
+          Token = "::6";
+          UseGateway = true;
+          # UseRoutes = true;
+          UseDNS = false;
+        };
       };
 
       # Connect the bridge ports to the bridge
@@ -305,8 +374,9 @@ in
   services.openssh = {
     enable = true;
     openFirewall = true; # Open the firewall for SSH connections.
-    listenAddresses = with consts.services.openssh; [
-      { inherit addr port; }
+    listenAddresses = with consts.roles.red-daiyu; [
+      { addr = ipv4; port = 22; }
+      { addr = ipv6; port = 22; }
     ];
     settings = {
       PermitRootLogin = "no"; # Disable root login via SSH.
@@ -315,70 +385,9 @@ in
     };
   };
 
-  # navidrome
-  services.navidrome = {
-    enable = true;
-    settings = with consts.services.navidrome; {
-      Address = addr;
-      Port = port;
-      MusicFolder = "/mnt/data/media/music";
-      DataFolder = "${consts.statePath}navidrome";
-      ScanSchedule = "@every 30m";
-      EnableInsightsCollector = false;
-      Scanner.PurgeMissing = "always";
-    };
-  };
-
-  # Samba
-  # See: https://nixos.wiki/wiki/Samba
-  # SeeAlso: smb.conf man (https://www.samba.org/samba/docs/current/man-html/smb.conf.5)
-  services.samba = {
-    enable = true;
-    openFirewall = true;
-    settings = {
-      global = {
-        "workgroup" = "WORKGROUP";
-        "server string" = "Lifeym's Home Lab Samba Server";
-        "netbios name" = "smbnix";
-        "security" = "user";
-        "interfaces" = "${consts.roles.red-daiyu}";
-        "bind interfaces only" = "yes";
-        "use sendfile" = "yes";
-        "hosts allow" = "192.168.0. 127.0.0.1 localhost";
-        "hosts deny" = "0.0.0.0/0";
-        "guest account" = "nobody";
-        "map to guest" = "bad user";
-        "passdb backend" = "tdbsam:/mnt/data/lib/samba/private/passdb.tdb"; # TDB based password storage backend
-      };
-      "downloads" = {
-        "path" = "/mnt/downloads";
-        "browseable" = "yes";
-        # "read only" = "yes";
-        "guest ok" = "yes";
-        # "create mask" = "0644";
-        # "directory mask" = "0755";
-        # "force user" = "username";
-        # "force group" = "groupname";
-      };
-      # "private" = {
-      #   "path" = "/mnt/Shares/Private";
-      #   "browseable" = "yes";
-      #   "read only" = "no";
-      #   "guest ok" = "no";
-      #   "create mask" = "0644";
-      #   "directory mask" = "0755";
-      #   "force user" = "username";
-      #   "force group" = "groupname";
-      # };
-    };
-  };
-
-  # Enable Web Services Dynamic Discovery host daemon.
-  # This enables (Samba) hosts, like your local NAS device,
-  #   to be found by Web Service Discovery Clients like Windows.
-  services.samba-wsdd = {
-    enable = true;
-    openFirewall = true;
+  systemd.services.sshd = {
+    requires = [ "network-online.target" ];
+    after = [ "network-online.target" ];
   };
 
   services.minidlna = {
@@ -388,192 +397,19 @@ in
       inotify = "yes"; # enable inotify monitoring to automatically discover new files.
       log_level = "error"; # reduce disk io and usage.
       media_dir = [
-        "V,/mnt/store/media"
         "V,/mnt/downloads"
       ];
     };
     openFirewall = true;
   };
 
-  # Woodpecker Server
-  services.woodpecker-server = {
-    enable = true;
-
-    # 基礎環境配置
-    environment = with consts.services.woodpecker-server; {
-      # Server fully qualified URL of the user-facing hostname, port (if not default for HTTP/HTTPS) and path prefix.
-      WOODPECKER_HOST = "https://ci.${consts.mydomain}";
-
-      # Configures the HTTP listener, supports unix socket via unix:// prefix".
-      WOODPECKER_SERVER_ADDR = "${addr}:${toString port}";
-
-      # Enable to allow user registration.
-      WOODPECKER_OPEN = "true";
-
-      # 数据库：单机首选 SQLite，数据存储在 /var/lib/woodpecker-server/
-      # WOODPECKER_DATABASE_DRIVER = "sqlite3";
-      WOODPECKER_DATABASE_DRIVER = "mysql";
-      WOODPECKER_DATABASE_DATASOURCE_FILE = "${consts.statePath}woodpecker-server/datasource";
-      # WOODPECKER_DATABASE_DATASOURCE = statePath "woodpecker-server/woodpecker.sqlite";
-
-      # 注：此处的 Client ID 和 Secret 需要在 Gitea 的「应用（OAuth2）」中生成
-      WOODPECKER_GITEA = "true";
-      WOODPECKER_GITEA_URL = "https://git.${consts.mydomain}";
-      WOODPECKER_GITEA_CLIENT = "ba299b9c-84a6-448d-8e0b-1d04eb7492f1";
-      WOODPECKER_GITEA_SECRET_FILE = "${consts.statePath}woodpecker-server/gitea-secret";
-
-      # 建議將敏感密鑰放入外部文件（參見下方步驟 2）
-      # WOODPECKER_GITEA_SECRET_FILE = "/run/secrets/woodpecker-gitea-secret";
-      WOODPECKER_AGENT_SECRET_FILE = "${consts.statePath}woodpecker-server/agent-secret";
-    };
-  };
-
-  #  Woodpecker Agent / Runner
-  services.woodpecker-agents = with consts.services.woodpecker-server; {
-    agents = {
-      "local-runner" = {
-        enable = true;
-        environment = {
-          WOODPECKER_SERVER = "${addr}:${toString port}"; # 連接本機 Server
-          WOODPECKER_MAX_WORKERS = "4";         # 同時並發的構建任務數
-
-          # 告訴 Runner 使用本機的 Podman/Docker 套接字來創建 CI 容器
-          WOODPECKER_BACKEND = "docker";
-          DOCKER_HOST = "unix:///run/podman/podman.sock";
-
-          WOODPECKER_AGENT_SECRET_FILE = "${consts.statePath}woodpecker-server/agent-secret";
-        };
-      };
-    };
-  };
-
-  services.easytier = {
-    enable = true;
-    instances.home.configFile = "${consts.statePath}easytier/home.conf";
-  };
-
-  services.restic.backups = {
-    red-daiyu = {
-      initialize = true;
-      paths = [
-        "/mnt/data"
-      ];
-      exclude = [
-        "/mnt/data/media"
-        "/mnt/data/backup/media"
-        "/mnt/data/restic"
-        "/mnt/data/shared"
-        "/mnt/data/lib/ncps/store"
-        "/mnt/data/lib/cjf"
-        "/mnt/data/lib/mariadb"
-      ];
-      pruneOpts = [
-        "--group-by host,tags"
-        "--keep-daily 7"
-        "--keep-weekly 4"
-        "--keep-monthly 3"
-      ];
-      extraBackupArgs = [
-        "--skip-if-unchanged"
-        "--tag system"
-      ];
-      timerConfig = {
-        OnCalendar = "01:30";
-        Persistent = true;
-        RandomizedDelaySec = "1h";
-      };
-
-      # Encryption key for repository
-      passwordFile = config.sops.secrets."repo/red-daiyu/password".path;
-
-      # Server URL
-      repositoryFile = config.sops.secrets."repo/red-daiyu/path".path;
-    };
-  };
-
-  services.ncps = {
-    enable = true;
-    server.addr = "localhost:8501";
-    cache = {
-      hostName = "cache.lifeym.xyz";
-      maxSize = "300G";
-      lru.schedule = "0 2 * * *";  # Daily at 2 AM
-      storage.local = "/mnt/data/lib/ncps";
-      upstream = {
-        urls = [
-          "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
-          "https://mirrors.ustc.edu.cn/nix-channels/store"
-          "https://mirror.sjtu.edu.cn/nix-channels/store"
-          "https://cache.nixos.org"
-        ];
-        publicKeys = [ "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" ];
-      };
-    };
-  };
-
-  services.fail2ban = {
-    enable = true;
-    bantime = "1h";
-    maxretry = 5;
-    ignoreIP = [ "127.0.0.1/8" "192.168.0.0/23" ];
-
-    jails = {
-      sshd.settings = {
-        enabled = true;
-        port = "ssh";
-        findtime = 600;
-      };
-
-      nginx-noscript.settings = {
-        enabled = true;
-        port = "http,https";
-        filter = "nginx-noscript";
-        logpath = "/var/log/nginx/access.log";
-        findtime = 600;
-      };
-
-      nginx-badbots.settings = {
-        enabled = true;
-        port = "http,https";
-        filter = "nginx-badbots";
-        logpath = "/var/log/nginx/access.log";
-        findtime = 600;
-      };
-
-      gitea-auth.settings = {
-        enabled = true;
-        port = "http,https";
-        filter = "gitea-auth";
-        logpath = "/var/log/nginx/access.log";
-        maxretry = 3;
-        findtime = 600;
-      };
-
-      web-unauthorized.settings = {
-        enabled = true;
-        port = "http,https";
-        filter = "nginx-unauthorized";
-        logpath = "/var/log/nginx/access.log";
-        findtime = 600;
-      };
-    };
-  };
-
-  environment.etc = {
-    "fail2ban/filter.d/nginx-noscript.conf".text = ''
-      [Definition]
-      failregex = ^<HOST> -.*"GET .*\.(php|asp|exe|pl|sh) HTTP/.*" (404|403)
-    '';
-
-    "fail2ban/filter.d/nginx-unauthorized.conf".text = ''
-      [Definition]
-      failregex = ^<HOST> -.*"POST .* HTTP/.*" 401
-    '';
-
-    "fail2ban/filter.d/gitea-auth.conf".text = ''
-      [Definition]
-      failregex = ^<HOST> -.*"POST /user/login HTTP/.*" (400|403)
-    '';
+  systemd.services.minidlna = {
+    requires = [
+      "mnt-downloads.mount"
+    ];
+    after = [
+      "mnt-downloads.mount"
+    ];
   };
 
   # Let's Encrypt certificates
@@ -625,67 +461,17 @@ in
   systemd.services."create-nas-network" = {
     description = "Create custom network for OCI containers";
     serviceConfig.Type = "oneshot";
+    requires = [
+      "podman.service" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
+    ];
+    after = [
+      "podman.service" # Thanks to the systemd-networkd, or v2ray cannot auto start with network.target
+    ];
     wantedBy = [ "multi-user.target" ];
     script = ''
       ${pkgs.podman}/bin/podman network exists nas || \
       ${pkgs.podman}/bin/podman network create nas --subnet=10.33.0.0/24 --gateway=10.33.0.1
     '';
-  };
-
-  # mariadb backup
-  systemd.services."mariadb-backup" = mylib.systemdService.mkMariaBackup {
-    containerName = "mariadb";
-    databases = [ "giteadb" "sis" "woodpecker" ];
-    pkgs = pkgs;
-    backend = "podman";
-    backupDir = "/mnt/data/backup/mariadb";
-    dbUserFile = config.sops.secrets."db/mariadb/user".path;
-    dbPasswordFile = config.sops.secrets."db/mariadb/password".path;
-  };
-
-  # systemd.timers."mariadb-backup" = {
-  #   wantedBy = [ "timers.target" ];
-  #   timerConfig = {
-  #     OnCalendar = "00:15";
-  #     Persistent = true;
-  #   };
-  # };
-
-  # git repo backup
-  # git仓库备份用命令：git clone --mirror
-  systemd.services."git-repo-sync" = {
-    description = "Pre-backup Git repositories sync";
-    script = ''
-      set -e
-      GIT_DIR="/mnt/data/backup/git"
-
-      echo "=== 开始更新所有 Git 仓库 ==="
-      for repo in "$GIT_DIR"/*; do
-        if [ -d "$repo/.git" ]; then
-          echo "正在更新: $(basename "$repo")"
-          (cd "$repo" && ${pkgs.git}/bin/git fetch --all --prune --tags --quiet) &
-        fi
-      done
-      wait
-      echo "=== 所有 Git 仓库已成功同步 ==="
-    '';
-    path = [ pkgs.git pkgs.bash pkgs.coreutils ];
-    serviceConfig = {
-      Type = "oneshot";
-      User = "root"; # 可依需求調整為你的用戶名
-    };
-  };
-
-  # 注入restic备份依赖，确保本地备份数据拉取先进行
-  systemd.services."restic-backups-red-daiyu" = {
-    wants = [
-      "git-repo-sync.service"
-      "mariadb-backup.service"
-    ];
-    after = [
-      "git-repo-sync.service"
-      "mariadb-backup.service"
-    ];
   };
 
   virtualisation.oci-containers.backend = "podman";

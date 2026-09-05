@@ -16,11 +16,21 @@ in
     recommendedTlsSettings = true;
     appendHttpConfig = ''
       server {
-        listen 80;
+        listen ${c.roles.web.ipv4}:80 default_server;
+        listen [${c.roles.web.ipv6}]:80 default_server;
         server_name _;
         location / {
           return 301 https://$host$request_uri;
         }
+      }
+
+      server {
+        listen ${c.roles.web.ipv4}:443 ssl default_server;
+        listen [${c.roles.web.ipv6}]:443 ssl default_server;
+        server_name _;
+        ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
+        ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
+        return 444;
       }
     '';
 
@@ -29,7 +39,8 @@ in
       sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
       sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
       listen = [
-        { addr = "${c.roles.web}"; port = 443; ssl = true; }
+        { addr = "${c.roles.web.ipv4}"; port = 443; ssl = true; }
+        { addr = "[${c.roles.web.ipv6}]"; port = 443; ssl = true; }
       ];
 
       # merge locations
@@ -51,12 +62,23 @@ in
 
     streamConfig = lib.concatStringsSep "\n"
       (lib.mapAttrsToList
-        (listenAddrPort: cfg: ''
+        (targetAddrPort: cfg: let
+          listenLines = builtins.concatStringsSep "\n" (builtins.map (ip: "listen ${ip};") cfg.listen);
+        in ''
          server {
-           listen ${listenAddrPort};
-           proxy_pass ${cfg.target};
+           ${listenLines}
+           proxy_pass ${targetAddrPort};
          }
         '')
         c.nginx.streams);
+  };
+
+  systemd.services.nginx = {
+    wants = [
+      "network-online.target"
+    ];
+    after = [
+      "network-online.target"
+    ];
   };
 }

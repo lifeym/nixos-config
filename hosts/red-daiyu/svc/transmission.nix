@@ -31,6 +31,13 @@ in
       "encryption" = 1; # 优先加密连接
       "dht-enabled" = true;
       "utp-enabled" = true;
+
+      ratio-limit-enabled = true;
+      ratio-limit = 2;
+      idle-seeding-limit-enabled = true;
+      idle-seeding-limit = 20;
+      speed-limit-up-enabled = true;
+      speed-limit-up = 3000;
     };
 
     credentialsFile = "${c.statePath}transmission/settings.json";
