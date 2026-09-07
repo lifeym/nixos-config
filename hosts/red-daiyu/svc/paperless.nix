@@ -1,4 +1,8 @@
 { config, pkgs-unstable, ... }:
+
+let
+  c = import ../consts.nix;
+in
 {
   # Nix module(26.05) for paperless has a PAPERLESS_SECRET_KEY bug with v3,
   # So we cannot run paperless v3 under nixos 26.05 without magic.
@@ -15,10 +19,10 @@
     # next line is ready for paperless v3 and nixos 26.05+
     # environmentFile = config.sops.templates."paperless-secret-key".path;
     consumptionDirIsPublic = true;
-    dataDir = "/mnt/data/lib/paperless";
-    domain = "paperless.lifeym.xyz";
-    # address = "127.0.0.1";
-    # port = 28981;
+    dataDir = "${c.statePath}paperless";
+    domain = "paperless.${c.mydomain}";
+    address = "${c.services.paperless.addr}";
+    port = c.services.paperless.port;
     settings = {
       PAPERLESS_CONSUMER_IGNORE_PATTERN = [
         ".DS_STORE/*"
@@ -31,5 +35,14 @@
         pdfa_image_compression = "lossless";
       };
     };
+  };
+
+  systemd.services.paperless = {
+    requires = [
+      "mnt-data.mount"
+    ];
+    after = [
+      "mnt-data.mount"
+    ];
   };
 }

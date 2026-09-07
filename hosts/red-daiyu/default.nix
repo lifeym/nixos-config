@@ -30,6 +30,7 @@ in
     ./svc/restic.nix
 
     # apps
+    ./svc/couchdb.nix
     ./svc/woodpecker.nix
     ./svc/navidrome.nix
     ./svc/paperless.nix
@@ -302,9 +303,13 @@ in
       "paperless-secret-key" = {};
       "pushover/apps/red-daiyu" = {};
       "pushover/user-key" = {};
+      "couchdb-password" = {};
     };
     templates."paperless-secret-key".content = ''
       PAPERLESS_SECRET_KEY="${config.sops.placeholder.paperless-secret-key}"
+    '';
+    templates."couchdb-password".content = ''
+      COUCHDB_PASSWORD=${config.sops.placeholder.couchdb-password}
     '';
   };
 

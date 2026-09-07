@@ -27,6 +27,7 @@ rec {
     einvault = { addr = "10.33.0.25"; port = 3000; };
     grocy = { addr = "10.33.0.26"; port = 80; };
     mealie = { addr = "10.33.0.27"; port = 9000; };
+    couchdb = { addr = "10.33.0.30"; port = 5984; };
 
     # localhost services
     navidrome = mkLocalSvc 4533;
@@ -102,6 +103,9 @@ rec {
           proxy_buffers              4 256k;
           proxy_busy_buffers_size    256k;
         ''; # can upload video?
+      };
+      "couchdb.${mydomain}" = {
+        target = "couchdb";
       };
     };
     streams = { # target addr:port = listen list[]
