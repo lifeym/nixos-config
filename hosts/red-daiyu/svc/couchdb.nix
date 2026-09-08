@@ -12,6 +12,7 @@ in
     volumes = [
       "/etc/localtime:/etc/localtime:ro"
       "${c.statePath}couchdb/data:/opt/couchdb/data"
+      "${c.statePath}couchdb/etc:/opt/couchdb/etc/local.d"
     ];
     environment = {
       COUCHDB_USER = "admin";

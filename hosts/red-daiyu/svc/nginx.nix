@@ -6,6 +6,9 @@ let
   defaultLocation = targetName: {
     proxyPass = upstreamOf targetName;
     proxyWebsockets = true;
+    extraConfig = ''
+      access_log /var/log/nginx/access.log main;
+    '';
   };
 in
 {
@@ -14,6 +17,15 @@ in
     recommendedProxySettings = true;
     recommendedOptimisation = true;
     recommendedTlsSettings = true;
+
+    # log settings
+    logError = "/var/log/nginx/error.log warn";
+    commonHttpConfig = ''
+      log_format main '$remote_addr - $remote_user [$time_local] '
+                      '"$request" status=$status bytes=$body_bytes_sent '
+                      'xff="$http_x_forwarded_for" '
+                      '"$http_referer" "$http_user_agent"';
+    '';
     appendHttpConfig = ''
       server {
         listen ${c.roles.web.ipv4}:80 default_server;
