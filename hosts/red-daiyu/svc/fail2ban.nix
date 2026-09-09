@@ -1,9 +1,12 @@
 { config, lib, pkgs, ... }:
 
+let
+  c = import ../consts.nix;
+in
 {
   services.fail2ban = {
     enable = true;
-    bantime = "1h";
+    bantime = "2h";
     maxretry = 5;
     ignoreIP = [ "127.0.0.1/8" "192.168.0.0/23" "[::1]" "fd33:2023:e125::/48" ];
 
@@ -18,32 +21,34 @@
         enabled = true;
         port = "http,https";
         filter = "nginx-noscript";
-        logpath = "/var/log/nginx/access.log";
+        logpath = "${c.logs.nginx.httpAccess}";
         findtime = 600;
+        bantime = "24h";
       };
 
       nginx-badbots.settings = {
         enabled = true;
         port = "http,https";
         filter = "nginx-badbots";
-        logpath = "/var/log/nginx/access.log";
+        logpath = "${c.logs.nginx.httpAccess}";
         findtime = 600;
+        bantime = "24h";
       };
 
       gitea-auth.settings = {
         enabled = true;
         port = "http,https";
         filter = "gitea-auth";
-        logpath = "/var/log/nginx/access.log";
+        logpath = "${c.logs.nginx.httpAccess}";
         maxretry = 3;
         findtime = 600;
       };
 
-      web-unauthorized.settings = {
+      nginx-unauthorized.settings = {
         enabled = true;
         port = "http,https";
         filter = "nginx-unauthorized";
-        logpath = "/var/log/nginx/access.log";
+        logpath = "${c.logs.nginx.httpAccess}";
         findtime = 600;
       };
     };

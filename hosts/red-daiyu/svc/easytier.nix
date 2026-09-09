@@ -9,7 +9,7 @@ in
     instances.home.configFile = "${c.statePath}easytier/home.conf";
   };
 
-  systemd.services.easytier = {
+  systemd.services.easytier-home = {
     requires = [
       "mnt-data.mount"
     ];

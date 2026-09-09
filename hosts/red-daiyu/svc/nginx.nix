@@ -6,9 +6,6 @@ let
   defaultLocation = targetName: {
     proxyPass = upstreamOf targetName;
     proxyWebsockets = true;
-    extraConfig = ''
-      access_log /var/log/nginx/access.log main;
-    '';
   };
 in
 {
@@ -19,12 +16,13 @@ in
     recommendedTlsSettings = true;
 
     # log settings
-    logError = "/var/log/nginx/error.log warn";
+    logError = "${c.logs.nginx.httpError} warn";
     commonHttpConfig = ''
       log_format main '$remote_addr - $remote_user [$time_local] '
-                      '"$request" status=$status bytes=$body_bytes_sent '
-                      'xff="$http_x_forwarded_for" '
-                      '"$http_referer" "$http_user_agent"';
+                      '"$request" $status $body_bytes_sent '
+                      '"$http_referer" "$http_user_agent" '
+                      'xff="$http_x_forwarded_for"';
+      access_log ${c.logs.nginx.httpAccess} main buffer=64k flush=5s;
     '';
     appendHttpConfig = ''
       server {
@@ -39,6 +37,15 @@ in
       server {
         listen ${c.roles.web.ipv4}:443 ssl default_server;
         listen [${c.roles.web.ipv6}]:443 ssl default_server;
+
+        # these two for upstream nginx
+        listen ${c.roles.web.ipv4}:8443 ssl proxy_protocol default_server;
+        listen [${c.roles.web.ipv6}]:8443 ssl proxy_protocol default_server;
+
+        # and fetch real ip from upstream nginx
+        set_real_ip_from 192.168.0.0/24;
+        real_ip_header proxy_protocol;
+
         server_name _;
         ssl_certificate /var/lib/acme/lifeym.xyz/cert.pem;
         ssl_certificate_key /var/lib/acme/lifeym.xyz/key.pem;
@@ -54,6 +61,15 @@ in
         { addr = "${c.roles.web.ipv4}"; port = 443; ssl = true; }
         { addr = "[${c.roles.web.ipv6}]"; port = 443; ssl = true; }
       ];
+      extraConfig = ''
+        # these two for upstream nginx
+        listen ${c.roles.web.ipv4}:8443 ssl proxy_protocol;
+        listen [${c.roles.web.ipv6}]:8443 ssl proxy_protocol;
+
+        # and fetch real ip from upstream nginx
+        set_real_ip_from 192.168.0.0/24;
+        real_ip_header proxy_protocol;
+      '';
 
       # merge locations
       locations = let
@@ -72,15 +88,25 @@ in
       extraConfig = vhostCfg.extraConfig;
     }) c.nginx.vhosts;
 
-    streamConfig = lib.concatStringsSep "\n"
+    streamConfig = ''
+      log_format stream_log '$remote_addr [$time_local] $protocol $status $bytes_sent $bytes_received '
+                            '$session_time "$upstream_addr" '
+                            '"$upstream_bytes_sent" "$upstream_bytes_received"';
+      access_log ${c.logs.nginx.streamAccess} stream_log buffer=64 flush=5s;
+      error_log ${c.logs.nginx.streamError} warn;
+
+      # limit stream per ip = 10
+      limit_conn_zone $binary_remote_addr zone=stream_per_ip:10m;
+      limit_conn stream_per_ip 10;
+    '' + lib.concatStringsSep "\n"
       (lib.mapAttrsToList
         (targetAddrPort: cfg: let
           listenLines = builtins.concatStringsSep "\n" (builtins.map (ip: "listen ${ip};") cfg.listen);
         in ''
-         server {
-           ${listenLines}
-           proxy_pass ${targetAddrPort};
-         }
+          server {
+            ${listenLines}
+            proxy_pass ${targetAddrPort};
+          }
         '')
         c.nginx.streams);
   };

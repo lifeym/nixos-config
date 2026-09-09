@@ -136,4 +136,14 @@ rec {
   };
 
   statePath = "/mnt/data/lib/";
+
+  # all log files, for fail2ban
+  logs = {
+    nginx = {
+      httpAccess = "/var/log/nginx/http_access.log";
+      httpError = "/var/log/nginx/http_error.log";
+      streamAccess = "/var/log/nginx/stream_access.log";
+      streamError = "/var/log/nginx/stream_error.log";
+    };
+  };
 }
