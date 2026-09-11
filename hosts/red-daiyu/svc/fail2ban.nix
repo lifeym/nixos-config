@@ -51,6 +51,16 @@ in
         logpath = "${c.logs.nginx.httpAccess}";
         findtime = 600;
       };
+
+      nginx-malicious.settings = {
+        enabled = true;
+        port = "http,https";
+        filter = "nginx-malicious";
+        logpath = "${c.logs.nginx.httpAccess}";
+        findtime = 60;
+        maxretry = 3;
+        bantime  = 86400;
+      };
     };
   };
 
@@ -63,6 +73,20 @@ in
     "fail2ban/filter.d/nginx-unauthorized.conf".text = ''
       [Definition]
       failregex = ^<HOST> -.*"POST .* HTTP/.*" 401
+    '';
+
+    "fail2ban/filter.d/nginx-malicious.conf".text = ''
+      [Definition]
+      failregex = ^<HOST> \- \- \[.*\] "GET \/(?:.*?)\.(?:php|asp|aspx|jsp|cgi|pl|sh|bash|py|txt|sql|env|yaml|yml|ini|conf)(?:[\s?].*)?" (?:400|404|403|444)
+            ^<HOST> \- \- \[.*\] "-(?:.*)?" 400
+            ^<HOST> \- \- \[.*\] ".*?(?:\x00|select|union|insert|update|delete|drop|alter|where|from|concat|md5|benchmark|sleep|and|or).*?" (?:400|403|404|444|500)
+            ^<HOST> \- \- \[.*\] ".*?(?:<script|javascript:|onerror=|onload=|alert\(|document\.cookie).*?" (?:400|403|404|444)
+            ^<HOST> \- \- \[.*\] ".*?(?:\.\.\/|\.\.\\|etc\/passwd|boot\.ini|win\.ini|proc\/self\/environ).*?" (?:400|403|404|444)
+            ^<HOST> \- \- \[.*\] ".*?\/cgi-bin\/(?:.*?)\.(?:cgi|pl|sh|bash)(?:[\s?].*)?"
+            ^<HOST> \- \- \[.*\] ".*?(?:\$\{IFS\}|wget\s|curl\s|chmod\s|chown\s|rm\s\-rf|base64|eval\(|passthru|shell_exec|system\(|phpinfo).*?" (?:400|403|404|444|500)
+            ^<HOST> \- \- \[.*\] ".*?" (?:400|444)
+      ignoreregex = ^<HOST> \- \- \[.*\] "GET \/favicon\.ico
+                    ^<HOST> \- \- \[.*\] "GET \/robots\.txt
     '';
 
     "fail2ban/filter.d/gitea-auth.conf".text = ''
