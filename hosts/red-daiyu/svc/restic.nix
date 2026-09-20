@@ -41,6 +41,34 @@ in
       # Server URL
       repositoryFile = config.sops.secrets."repo/red-daiyu/path".path;
     };
+
+    music = {
+      initialize = true;
+      paths = [
+        "/mnt/data/media/music"
+      ];
+      pruneOpts = [
+        "--group-by host,tags"
+        "--keep-daily 7"
+        "--keep-weekly 4"
+        "--keep-monthly 3"
+      ];
+      extraBackupArgs = [
+        "--skip-if-unchanged"
+        "--tag music"
+      ];
+      timerConfig = {
+        OnCalendar = "02:30";
+        Persistent = true;
+        RandomizedDelaySec = "1h";
+      };
+
+      # Encryption key for repository
+      passwordFile = config.sops.secrets."repo/red-daiyu/password".path;
+
+      # Server URL
+      repositoryFile = config.sops.secrets."repo/red-daiyu/path".path;
+    };
   };
 
   # 注入restic备份依赖，确保本地备份数据拉取先进行
