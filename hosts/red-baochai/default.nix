@@ -74,12 +74,28 @@ in
   i18n.inputMethod = {
     type = "fcitx5";
     enable = true;
-    fcitx5.waylandFrontend = true;
-    fcitx5.addons = with pkgs; [
-      kdePackages.fcitx5-qt
-      qt6Packages.fcitx5-chinese-addons
-      fcitx5-nord # theme
-    ];
+    fcitx5 = {
+      waylandFrontend = true;
+      ignoreUserConfig = true; # use settings below, ignore user config
+      addons = with pkgs; [
+        kdePackages.fcitx5-qt
+        qt6Packages.fcitx5-chinese-addons
+        fcitx5-gtk
+        fcitx5-nord # theme
+      ];
+      settings.inputMethod = {
+        GroupOrder."0" = "Default";
+        "Groups/0" = { Name = "Default"; DefaultIM = "pinyin"; };
+        "Groups/0/Items/0".Name = "keyboard-us";
+        "Groups/0/Items/1".Name = "pinyin";
+      };
+    };
+  };
+
+  environment.sessionVariables = {
+    GTK_IM_MODULE = "fcitx";
+    QT_IM_MODULE = "fcitx";
+    XMODIFIERS = "@im=fcitx";
   };
 
   # Enable sound.
@@ -181,13 +197,6 @@ in
       package = pkgs.qemu;
       runAsRoot = true;
       swtpm.enable = true;
-      # ovmf = {
-      #   enable = true;
-      #   packages = [(pkgs.OVMF.override {
-      #     secureBoot = true;
-      #     tpmSupport = true;
-      #   }).fd];
-      # };
     };
   };
   boot.extraModprobeConfig = "options kvm_amd nested=1";
