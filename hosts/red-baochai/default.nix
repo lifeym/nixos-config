@@ -158,7 +158,6 @@ in
     clipboard-jh
     dua
     fzf
-    gh
     git
     gnumake
     go-task
@@ -189,6 +188,12 @@ in
     git-credential-manager
     gitui
     mycli
+
+    # Haskell
+    ghc
+    cabal-install
+    stack
+    haskell-language-server
   ];
 
   virtualisation.libvirtd = {
