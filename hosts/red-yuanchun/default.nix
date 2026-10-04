@@ -52,6 +52,12 @@
     wget
     woodpecker-cli
     zoxide
+
+    # haskell
+    (ghc.withPackages (hsPkgs: with hsPkgs; [
+      cabal-install
+      stack
+    ]))
   ];
 
   programs.zsh.enable = true;
