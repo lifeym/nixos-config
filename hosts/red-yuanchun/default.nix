@@ -57,6 +57,7 @@
     (ghc.withPackages (hsPkgs: with hsPkgs; [
       cabal-install
       stack
+      haskell-language-server
     ]))
   ];
 
