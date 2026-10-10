@@ -1,4 +1,4 @@
-{ }:
+_:
 
 let
   c = import ../consts.nix;
