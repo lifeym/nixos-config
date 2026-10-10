@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 let
   c = import ../consts.nix;
@@ -17,9 +17,9 @@ in
 
       # 2. Web 界面 (RPC) 远程控制安全设置
       "rpc-enabled" = true;
-      "rpc-port" = 9091;                # Web 访问端口
-      "rpc-bind-address" = "localhost";   # 允许局域网内其他设备访问
-      "rpc-whitelist-enabled" = false;  # 关闭白名单（配合下一行的密码使用更方便）
+      "rpc-port" = 9091; # Web 访问端口
+      "rpc-bind-address" = "localhost"; # 允许局域网内其他设备访问
+      "rpc-whitelist-enabled" = false; # 关闭白名单（配合下一行的密码使用更方便）
 
       # 3. 登录 Web 界面的账号密码
       "rpc-authentication-required" = true;

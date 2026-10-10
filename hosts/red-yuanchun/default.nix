@@ -54,11 +54,13 @@
     zoxide
 
     # haskell
-    (ghc.withPackages (hsPkgs: with hsPkgs; [
-      cabal-install
-      stack
-      haskell-language-server
-    ]))
+    (ghc.withPackages (
+      hsPkgs: with hsPkgs; [
+        cabal-install
+        stack
+        haskell-language-server
+      ]
+    ))
   ];
 
   programs.zsh.enable = true;

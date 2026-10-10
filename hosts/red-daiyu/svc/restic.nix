@@ -1,4 +1,9 @@
-{ config, pkgs, mylib, ... }:
+{
+  config,
+  pkgs,
+  mylib,
+  ...
+}:
 
 let
   c = import ../consts.nix;
@@ -84,22 +89,28 @@ in
   };
 
   # mariadb backup
-  systemd.services."mariadb-backup" = mylib.systemdService.mkMariaBackup {
-    containerName = "mariadb";
-    databases = [ "giteadb" "sis" "woodpecker" ];
-    pkgs = pkgs;
-    backend = "podman";
-    backupDir = "/mnt/data/backup/mariadb";
-    dbUserFile = config.sops.secrets."db/mariadb/user".path;
-    dbPasswordFile = config.sops.secrets."db/mariadb/password".path;
-  } // {
-    requires = [
-      "mnt-data.mount"
-    ];
-    after = [
-      "mnt-data.mount"
-    ];
-  };
+  systemd.services."mariadb-backup" =
+    mylib.systemdService.mkMariaBackup {
+      containerName = "mariadb";
+      databases = [
+        "giteadb"
+        "sis"
+        "woodpecker"
+      ];
+      inherit pkgs;
+      backend = "podman";
+      backupDir = "/mnt/data/backup/mariadb";
+      dbUserFile = config.sops.secrets."db/mariadb/user".path;
+      dbPasswordFile = config.sops.secrets."db/mariadb/password".path;
+    }
+    // {
+      requires = [
+        "mnt-data.mount"
+      ];
+      after = [
+        "mnt-data.mount"
+      ];
+    };
 
   # git repo backup
   # git仓库备份用命令：git clone --mirror
@@ -125,7 +136,11 @@ in
       wait
       echo "=== 所有 Git 仓库已成功同步 ==="
     '';
-    path = [ pkgs.git pkgs.bash pkgs.coreutils ];
+    path = [
+      pkgs.git
+      pkgs.bash
+      pkgs.coreutils
+    ];
     serviceConfig = {
       Type = "oneshot";
       User = "root"; # 可依需求調整為你的用戶名

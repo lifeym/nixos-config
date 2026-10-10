@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   imports = [
@@ -86,5 +86,5 @@
   programs.home-manager.enable = true;
   programs.zsh.enable = true;
   programs.zsh.enableCompletion = true;
-#  environment.pathsToLink = [ "/share/zsh" ];
+  #  environment.pathsToLink = [ "/share/zsh" ];
 }

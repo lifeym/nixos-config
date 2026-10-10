@@ -5,9 +5,7 @@
 {
   config,
   lib,
-  mylib,
   pkgs,
-  pkgs-stable,
   pkgs-unstable,
   hostName,
   ...
@@ -103,39 +101,41 @@ in
 
   # mdadm raid
   # Or use environment.etc."mdadm.conf" instead.
-  boot.swraid = let
-    appTokenFile = config.sops.secrets."pushover/apps/red-daiyu".path;
-    userKeyFile = config.sops.secrets."pushover/user-key".path;
+  boot.swraid =
+    let
+      appTokenFile = config.sops.secrets."pushover/apps/red-daiyu".path;
+      userKeyFile = config.sops.secrets."pushover/user-key".path;
 
-    # Create a lightweight shell script to parse mdadm event details
-    mdadmPushoverAlert = pkgs.writeShellScript "mdadm-pushover" ''
-      EVENT="$1"
-      DEVICE="$2"
-      COMPONENT="$3"
+      # Create a lightweight shell script to parse mdadm event details
+      mdadmPushoverAlert = pkgs.writeShellScript "mdadm-pushover" ''
+        EVENT="$1"
+        DEVICE="$2"
+        COMPONENT="$3"
 
-      # Construct a descriptive message payload
-      MESSAGE="MDADM Event: $EVENT detected on $DEVICE"
-      if [ -n "$COMPONENT" ]; then
-        MESSAGE="$MESSAGE (Component affected: $COMPONENT)"
-      fi
+        # Construct a descriptive message payload
+        MESSAGE="MDADM Event: $EVENT detected on $DEVICE"
+        if [ -n "$COMPONENT" ]; then
+          MESSAGE="$MESSAGE (Component affected: $COMPONENT)"
+        fi
 
-      # Dispatch to Pushover API
-      ${pkgs.curl}/bin/curl -s https://api.pushover.net/1/messages.json \
-        -F "token=$(cat ${appTokenFile})" \
-        -F "user=$(cat ${userKeyFile})" \
-        -F "title=⚠️ RAID Alert - $(hostname)" \
-        -F "message=$MESSAGE" \
-        -F "priority=1" \
-    '';
-  in {
-    enable = true;
-    mdadmConf = ''
-      ARRAY /dev/md/openSUSE:1 metadata=1.2 UUID=890c5d74:2a8b8f7f:01c80f44:f4ed2786
-      MAILADDR 8r92uvybh6@pomail.net
-      MAILFROM lifeym@qq.com
-      PROGRAM ${mdadmPushoverAlert}
-    '';
-  };
+        # Dispatch to Pushover API
+        ${pkgs.curl}/bin/curl -s https://api.pushover.net/1/messages.json \
+          -F "token=$(cat ${appTokenFile})" \
+          -F "user=$(cat ${userKeyFile})" \
+          -F "title=⚠️ RAID Alert - $(hostname)" \
+          -F "message=$MESSAGE" \
+          -F "priority=1" \
+      '';
+    in
+    {
+      enable = true;
+      mdadmConf = ''
+        ARRAY /dev/md/openSUSE:1 metadata=1.2 UUID=890c5d74:2a8b8f7f:01c80f44:f4ed2786
+        MAILADDR 8r92uvybh6@pomail.net
+        MAILFROM lifeym@qq.com
+        PROGRAM ${mdadmPushoverAlert}
+      '';
+    };
 
   services.lvm.boot.thin.enable = true; # when using thin provisioning or caching
 
@@ -149,18 +149,6 @@ in
       "defaults"
     ];
   };
-
-  # fileSystems."/mnt/store" = {
-  #   device = "/dev/disk/by-uuid/420525b9-5ad6-4844-9dfd-e7d9cef05462";
-  #   fsType = "xfs";
-  #   options = [
-  #     "nofail"
-  #     "x-systemd.automount" # 按需挂载
-  #     "x-systemd.idle-timeout=60s"
-  #     "x-systemd.device-timeout=30s"
-  #     "defaults"
-  #   ];
-  # };
 
   fileSystems."/mnt/downloads" = {
     device = "/dev/disk/by-uuid/bee914aa-99e5-4329-9e62-dfc26f7f0e85";
@@ -199,7 +187,7 @@ in
 
     # Configure network proxy if necessary
     proxy.default = consts.proxyCfg.httpProxy;
-    proxy.noProxy = consts.proxyCfg.noProxy; #"localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
+    proxy.noProxy = consts.proxyCfg.noProxy; # "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
 
   # Use systemd-networkd to manage networks static settings.
@@ -207,13 +195,13 @@ in
   systemd.network = {
     enable = true;
     netdevs = {
-       # Create the bridge interface
-       "20-br0" = {
-         netdevConfig = {
-           Kind = "bridge";
-           Name = "br0";
-         };
-       };
+      # Create the bridge interface
+      "20-br0" = {
+        netdevConfig = {
+          Kind = "bridge";
+          Name = "br0";
+        };
+      };
     };
 
     networks = {
@@ -254,7 +242,7 @@ in
       # Configure the bridge for its desired function
       "40-br0" = {
         matchConfig.Name = "br0";
-        bridgeConfig = {};
+        bridgeConfig = { };
         linkConfig = {
           # or "routable" with IP addresses configured
           # RequiredForOnline = "carrier";
@@ -283,7 +271,7 @@ in
       # To keep user service to stay running after a user logs out.
       # See: https://wiki.nixos.org/wiki/Systemd/User_Services
       linger = true;
-      packages = with pkgs; [];
+      packages = with pkgs; [ ];
     };
 
     users.minidlna = {
@@ -295,15 +283,15 @@ in
     defaultSopsFile = ./secrets.yaml;
     age.keyFile = "/home/lifeym/.config/sops/age/keys.txt";
     secrets = {
-      "repo/red-daiyu/password" = {};
-      "repo/red-daiyu/path" = {};
-      "db/mariadb/user" = {};
-      "db/mariadb/password" = {};
-      "smtp/token" = {};
-      "paperless-secret-key" = {};
-      "pushover/apps/red-daiyu" = {};
-      "pushover/user-key" = {};
-      "couchdb-password" = {};
+      "repo/red-daiyu/password" = { };
+      "repo/red-daiyu/path" = { };
+      "db/mariadb/user" = { };
+      "db/mariadb/password" = { };
+      "smtp/token" = { };
+      "paperless-secret-key" = { };
+      "pushover/apps/red-daiyu" = { };
+      "pushover/user-key" = { };
+      "couchdb-password" = { };
     };
     templates."paperless-secret-key".content = ''
       PAPERLESS_SECRET_KEY="${config.sops.placeholder.paperless-secret-key}"
@@ -315,43 +303,46 @@ in
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    # utilities
-    age
-    bat
-    chezmoi
-    clipboard-jh
-    dig # debug dns
-    dua
-    fzf
-    gh
-    git
-    gnumake
-    go-task
-    htop
-    neovim
-    nmap # debug network
-    nushell
-    restic # backup tool
-    ripgrep
-    shellcheck
-    sops # secrets management tool, can be used with restic to automate backup operation.
-    starship
-    tmux
-    vifm
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    wget # curl sometimes failed to download files, wget come to help.
-    zoxide
+  environment.systemPackages =
+    with pkgs;
+    [
+      # utilities
+      age
+      bat
+      chezmoi
+      clipboard-jh
+      dig # debug dns
+      dua
+      fzf
+      gh
+      git
+      gnumake
+      go-task
+      htop
+      neovim
+      nmap # debug network
+      nushell
+      restic # backup tool
+      ripgrep
+      shellcheck
+      sops # secrets management tool, can be used with restic to automate backup operation.
+      starship
+      tmux
+      vifm
+      vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+      wget # curl sometimes failed to download files, wget come to help.
+      zoxide
 
-    # develop tools
-    direnv
-    difftastic
-    git-credential-manager
-    gitui
+      # develop tools
+      direnv
+      difftastic
+      git-credential-manager
+      gitui
 
-  ] ++ (with pkgs-unstable; [
-    v2ray
-  ]);
+    ]
+    ++ (with pkgs-unstable; [
+      v2ray
+    ]);
 
   environment.variables = {
     EDITOR = "vim";
@@ -380,8 +371,14 @@ in
     enable = true;
     openFirewall = true; # Open the firewall for SSH connections.
     listenAddresses = with consts.roles.red-daiyu; [
-      { addr = ipv4; port = 22; }
-      { addr = ipv6; port = 22; }
+      {
+        addr = ipv4;
+        port = 22;
+      }
+      {
+        addr = ipv6;
+        port = 22;
+      }
     ];
     settings = {
       PermitRootLogin = "no"; # Disable root login via SSH.
@@ -440,7 +437,8 @@ in
       3306 # mysql
       11010 # easytier
       consts.proxyCfg.port # v2ray
-    ] ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
+    ]
+    ++ lib.range 5900 5920; # Reserve5900~5920 for vnc ports
   };
 
   # xray systemd service
@@ -509,9 +507,10 @@ in
       environmentFiles = [
         # Sample:
         # MARIADB_ROOT_PASSWORD=YourInitPassword
-        ("${consts.statePath}mariadb/env")
+        "${consts.statePath}mariadb/env"
       ];
-      volumes = [ # /path/on/host:/path/inside/container
+      volumes = [
+        # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
         "${consts.statePath}mariadb/mysql:/var/lib/mysql"
         "${consts.statePath}mariadb/conf.d:/etc/mysql/conf.d:ro"
@@ -528,9 +527,10 @@ in
       environmentFiles = [
         # Sample:
         # MARIADB_ROOT_PASSWORD=YourPassword
-        ("${consts.statePath}cjf/mariadb/env")
+        "${consts.statePath}cjf/mariadb/env"
       ];
-      volumes = [ # /path/on/host:/path/inside/container
+      volumes = [
+        # /path/on/host:/path/inside/container
         "/etc/localtime:/etc/localtime:ro"
         "${consts.statePath}cjf/mariadb/mysql:/var/lib/mysql"
         "${consts.statePath}cjf/mariadb/conf.d:/etc/mysql/conf.d:ro"
@@ -553,7 +553,7 @@ in
         GITEA__database__HOST = "mariadb:3306";
       };
       environmentFiles = [
-        ("${consts.statePath}gitea/env")
+        "${consts.statePath}gitea/env"
       ];
       volumes = [
         "/etc/localtime:/etc/localtime:ro"

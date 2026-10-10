@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ }:
 
 let
   c = import ../consts.nix;
@@ -53,7 +53,7 @@ in
         enable = true;
         environment = {
           WOODPECKER_SERVER = "${c.services.woodpecker-server.addr}:${toString c.services.woodpecker-server.port}"; # 連接本機 Server
-          WOODPECKER_MAX_WORKERS = "4";         # 同時並發的構建任務數
+          WOODPECKER_MAX_WORKERS = "4"; # 同時並發的構建任務數
 
           # 告訴 Runner 使用本機的 Podman/Docker 套接字來創建 CI 容器
           WOODPECKER_BACKEND = "docker";

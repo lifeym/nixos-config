@@ -1,0 +1,7 @@
+{
+  disabled = [
+    "empty_pattern",
+    "repeated_keys"
+  ],
+  ignore = ["hardware-configuration.nix"]
+}

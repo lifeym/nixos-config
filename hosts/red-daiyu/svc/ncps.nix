@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ }:
 
 let
   c = import ../consts.nix;
@@ -10,7 +10,7 @@ in
     cache = {
       hostName = "cache.lifeym.xyz";
       maxSize = "300G";
-      lru.schedule = "0 2 * * *";  # Daily at 2 AM
+      lru.schedule = "0 2 * * *"; # Daily at 2 AM
       storage.local = "${c.statePath}ncps";
       upstream = {
         urls = [

@@ -3,7 +3,7 @@
   nixpkgs,
   nix-darwin,
   ...
-} @ inputs:
+}@inputs:
 let
   inherit (nixpkgs) lib;
   mylib = import ../lib { inherit lib nix-darwin; };
@@ -40,7 +40,9 @@ let
       };
     };
 
-  moduleArgs = inputs // { inherit lib mylib mkSpecialArgs; };
+  moduleArgs = inputs // {
+    inherit lib mylib mkSpecialArgs;
+  };
 in
 {
   inherit devShells;

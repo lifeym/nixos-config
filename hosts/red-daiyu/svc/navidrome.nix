@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ }:
 
 let
   c = import ../consts.nix;
@@ -19,7 +19,7 @@ in
   };
 
   systemd.services.navidrome = {
-      requires = [ "mnt-data.mount" ];
-      after = [ "mnt-data.mount" ];
+    requires = [ "mnt-data.mount" ];
+    after = [ "mnt-data.mount" ];
   };
 }

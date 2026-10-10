@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, ... }:
 {
   programs.msmtp = {
     enable = true;
@@ -14,7 +14,7 @@
       tls_starttls = "on";
       from = "lifeym@qq.com";
       user = "lifeym@qq.com";
-      passwordeval = ''cat ${config.sops.secrets."smtp/token".path}'';
+      passwordeval = "cat ${config.sops.secrets."smtp/token".path}";
     };
   };
 

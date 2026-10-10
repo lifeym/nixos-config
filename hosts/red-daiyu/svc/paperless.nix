@@ -1,4 +1,4 @@
-{ config, pkgs-unstable, ... }:
+{ }:
 
 let
   c = import ../consts.nix;
@@ -29,7 +29,12 @@ in
         "desktop.ini"
       ];
       PAPERLESS_OCR_LANGUAGE = "chi_sim+eng";
-      PAPERLESS_OCR_LANGUAGES = [ "chi-sim" "eng" "chi-tra" "jpn" ];
+      PAPERLESS_OCR_LANGUAGES = [
+        "chi-sim"
+        "eng"
+        "chi-tra"
+        "jpn"
+      ];
       PAPERLESS_OCR_USER_ARGS = {
         optimize = 1;
         pdfa_image_compression = "lossless";

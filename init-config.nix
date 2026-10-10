@@ -1,5 +1,4 @@
 {
-  config,
   pkgs,
   ...
 }:
@@ -27,7 +26,7 @@ in
   networking = {
     # Configure network proxy if necessary
     proxy.default = proxyCfg.httpProxy;
-    proxy.noProxy = proxyCfg.noProxy; #"localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
+    proxy.noProxy = proxyCfg.noProxy; # "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
 
   # List packages installed in system profile. To search, run:

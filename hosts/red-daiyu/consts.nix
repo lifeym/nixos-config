@@ -4,38 +4,85 @@ let
 in
 rec {
   roles = {
-    red-daiyu = { ipv4 = "192.168.0.6"; ipv6 = "${ipv6ULA}::6"; };
-    web = { ipv4 = "192.168.0.70"; ipv6 = "${ipv6ULA}::70"; };
-    mariadb = { ipv4 = "192.168.0.71"; ipv6 = "${ipv6ULA}::71"; };
-    cjf-mariadb = { ipv4 = "192.168.0.73"; ipv6 = "${ipv6ULA}::73"; };
+    red-daiyu = {
+      ipv4 = "192.168.0.6";
+      ipv6 = "${ipv6ULA}::6";
+    };
+    web = {
+      ipv4 = "192.168.0.70";
+      ipv6 = "${ipv6ULA}::70";
+    };
+    mariadb = {
+      ipv4 = "192.168.0.71";
+      ipv6 = "${ipv6ULA}::71";
+    };
+    cjf-mariadb = {
+      ipv4 = "192.168.0.73";
+      ipv6 = "${ipv6ULA}::73";
+    };
   };
   # no lib.mapAttrsToList, use builtins.map instead
   networkAddress = builtins.concatMap (service: [
     "${service.ipv4}/24"
     "${service.ipv6}/64"
   ]) (builtins.attrValues roles);
-  services = let
-    mkLocalSvc = port: { addr = "127.0.0.1"; inherit port; };
-  in {
-    # container services
-    mariadb = { addr = "10.33.0.3"; port = 3306; };
-    cjf-mariadb = { addr = "10.33.0.4"; port = 3306; };
-    gitea = { addr = "10.33.0.5"; port = 3000; };
-    cwa = { addr = "10.33.0.11"; port = 8083; };
-    registry-ui = { addr = "10.33.0.20"; port = 80; };
-    registry-server = { addr = "10.33.0.21"; port = 5000; };
-    einvault = { addr = "10.33.0.25"; port = 3000; };
-    grocy = { addr = "10.33.0.26"; port = 80; };
-    mealie = { addr = "10.33.0.27"; port = 9000; };
-    couchdb = { addr = "10.33.0.30"; port = 5984; };
+  services =
+    let
+      mkLocalSvc = port: {
+        addr = "127.0.0.1";
+        inherit port;
+      };
+    in
+    {
+      # container services
+      mariadb = {
+        addr = "10.33.0.3";
+        port = 3306;
+      };
+      cjf-mariadb = {
+        addr = "10.33.0.4";
+        port = 3306;
+      };
+      gitea = {
+        addr = "10.33.0.5";
+        port = 3000;
+      };
+      cwa = {
+        addr = "10.33.0.11";
+        port = 8083;
+      };
+      registry-ui = {
+        addr = "10.33.0.20";
+        port = 80;
+      };
+      registry-server = {
+        addr = "10.33.0.21";
+        port = 5000;
+      };
+      einvault = {
+        addr = "10.33.0.25";
+        port = 3000;
+      };
+      grocy = {
+        addr = "10.33.0.26";
+        port = 80;
+      };
+      mealie = {
+        addr = "10.33.0.27";
+        port = 9000;
+      };
+      couchdb = {
+        addr = "10.33.0.30";
+        port = 5984;
+      };
 
-    # localhost services
-    navidrome = mkLocalSvc 4533;
-    woodpecker-server = mkLocalSvc 8000;
-    ncps = mkLocalSvc 8501;
-    transmission = mkLocalSvc 9091;
-    paperless = mkLocalSvc 28981;
-  };
+      # localhost services
+      navidrome = mkLocalSvc 4533;
+      woodpecker-server = mkLocalSvc 8000;
+      ncps = mkLocalSvc 8501;
+      transmission = mkLocalSvc 9091;
+      paperless = mkLocalSvc 28981;
+    };
   mydomain = "lifeym.xyz";
   nginx = {
     vhosts = {
@@ -108,7 +155,8 @@ rec {
         target = "couchdb";
       };
     };
-    streams = { # target addr:port = listen list[]
+    streams = {
+      # target addr:port = listen list[]
       "${services.mariadb.addr}:${toString services.mariadb.port}" = {
         listen = [
           "${roles.mariadb.ipv4}:${toString services.mariadb.port}"

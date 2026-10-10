@@ -1,8 +1,16 @@
-{ config, lib, pkgs, ... }:
+{
+  lib,
+  ...
+}:
 
 let
   c = import ../consts.nix;
-  upstreamOf = name: let s = c.services.${name}; in "http://${s.addr}:${toString s.port}";
+  upstreamOf =
+    name:
+    let
+      s = c.services.${name};
+    in
+    "http://${s.addr}:${toString s.port}";
   defaultLocation = targetName: {
     proxyPass = upstreamOf targetName;
     proxyWebsockets = true;
@@ -53,40 +61,56 @@ in
       }
     '';
 
-    virtualHosts = lib.mapAttrs (domain: vhostCfg: {
-      onlySSL = true;
-      sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
-      sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
-      listen = [
-        { addr = "${c.roles.web.ipv4}"; port = 443; ssl = true; }
-        { addr = "[${c.roles.web.ipv6}]"; port = 443; ssl = true; }
-      ];
-      extraConfig = ''
-        # these two for upstream nginx
-        listen ${c.roles.web.ipv4}:8443 ssl proxy_protocol;
-        listen [${c.roles.web.ipv6}]:8443 ssl proxy_protocol;
-
-        # and fetch real ip from upstream nginx
-        set_real_ip_from 192.168.0.0/24;
-        real_ip_header proxy_protocol;
-      '';
-
-      # merge locations
-      locations = let
-        # merge locations.extraConfig
-        base = { "/" = defaultLocation vhostCfg.target; };
-        overrides = lib.mapAttrs (loc: locCfg:
-          (defaultLocation vhostCfg.target)
-          // lib.OptionalAttrs (locCfg ? extraLocationConfig) {
-            extraConfig = (defaultLocation vhostCfg.target).extraConfig + "\n" + locCfg.extraLocationConfig;
+    virtualHosts = lib.mapAttrs (
+      _: vhostCfg:
+      {
+        onlySSL = true;
+        sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
+        sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
+        listen = [
+          {
+            addr = "${c.roles.web.ipv4}";
+            port = 443;
+            ssl = true;
           }
-        ) (vhostCfg.locations or {});
-      in
-        base // overrides;
-    }
-    // lib.optionalAttrs (vhostCfg ? extraConfig) {
-      extraConfig = vhostCfg.extraConfig;
-    }) c.nginx.vhosts;
+          {
+            addr = "[${c.roles.web.ipv6}]";
+            port = 443;
+            ssl = true;
+          }
+        ];
+        extraConfig = ''
+          # these two for upstream nginx
+          listen ${c.roles.web.ipv4}:8443 ssl proxy_protocol;
+          listen [${c.roles.web.ipv6}]:8443 ssl proxy_protocol;
+
+          # and fetch real ip from upstream nginx
+          set_real_ip_from 192.168.0.0/24;
+          real_ip_header proxy_protocol;
+        '';
+
+        # merge locations
+        locations =
+          let
+            # merge locations.extraConfig
+            base = {
+              "/" = defaultLocation vhostCfg.target;
+            };
+            overrides = lib.mapAttrs (
+              _: locCfg:
+              (defaultLocation vhostCfg.target)
+              // lib.OptionalAttrs (locCfg ? extraLocationConfig) {
+                extraConfig = (defaultLocation vhostCfg.target).extraConfig + "\n" + locCfg.extraLocationConfig;
+              }
+            ) (vhostCfg.locations or { });
+          in
+          base // overrides;
+      }
+      // lib.optionalAttrs (vhostCfg ? extraConfig) {
+        # extraConfig = vhostCfg.extraConfig;
+        inherit (vhostCfg) extraConfig;
+      }
+    ) c.nginx.vhosts;
 
     streamConfig = ''
       log_format stream_log '$remote_addr [$time_local] $protocol $status $bytes_sent $bytes_received '
@@ -98,17 +122,21 @@ in
       # limit stream per ip = 10
       limit_conn_zone $binary_remote_addr zone=stream_per_ip:10m;
       limit_conn stream_per_ip 10;
-    '' + lib.concatStringsSep "\n"
-      (lib.mapAttrsToList
-        (targetAddrPort: cfg: let
+    ''
+    + lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (
+        targetAddrPort: cfg:
+        let
           listenLines = builtins.concatStringsSep "\n" (builtins.map (ip: "listen ${ip};") cfg.listen);
-        in ''
+        in
+        ''
           server {
             ${listenLines}
             proxy_pass ${targetAddrPort};
           }
-        '')
-        c.nginx.streams);
+        ''
+      ) c.nginx.streams
+    );
   };
 
   systemd.services.nginx = {

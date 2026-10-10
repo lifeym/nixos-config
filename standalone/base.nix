@@ -1,4 +1,7 @@
-{ lib, pkgs, pkgs-unstable, ... }:
+{
+  pkgs-unstable,
+  ...
+}:
 
 {
   fonts.fontconfig.enable = true;

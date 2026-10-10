@@ -12,7 +12,8 @@
     };
   };
 
-  outputs = { nixpkgs, home-manager, ... }@inputs:
+  outputs =
+    { nixpkgs, home-manager, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -26,8 +27,9 @@
           pkgs-stable = import inputs.nixpkgs-stable {
             inherit system;
           };
-      };
-    in {
+        };
+    in
+    {
       homeConfigurations."leonardo" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
 

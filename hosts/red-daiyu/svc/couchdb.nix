@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ }:
 
 let
   c = import ../consts.nix;

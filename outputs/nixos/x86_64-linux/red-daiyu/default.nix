@@ -14,6 +14,5 @@
   systemNixPkgs = nixpkgs-stable;
 
   # Install extra modules for the system.
-  extraModules = mylib.nixModulePath.nixos.podman
-    ++ [ sops-nix-stable.nixosModules.sops ];
+  extraModules = mylib.nixModulePath.nixos.podman ++ [ sops-nix-stable.nixosModules.sops ];
 }

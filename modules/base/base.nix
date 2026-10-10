@@ -1,5 +1,5 @@
 # Basiclly include all nix settings for NixOS, nix-darwin, and nix package manager.
-{ lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   # Perform garbage collection to reduce disk usage.

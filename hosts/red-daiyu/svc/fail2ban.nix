@@ -1,4 +1,6 @@
-{ config, lib, pkgs, ... }:
+{
+
+}:
 
 let
   c = import ../consts.nix;
@@ -8,7 +10,12 @@ in
     enable = true;
     bantime = "2h";
     maxretry = 5;
-    ignoreIP = [ "127.0.0.1/8" "192.168.0.0/23" "[::1]" "fd33:2023:e125::/48" ];
+    ignoreIP = [
+      "127.0.0.1/8"
+      "192.168.0.0/23"
+      "[::1]"
+      "fd33:2023:e125::/48"
+    ];
 
     jails = {
       sshd.settings = {
@@ -59,7 +66,7 @@ in
         logpath = "${c.logs.nginx.httpAccess}";
         findtime = 60;
         maxretry = 3;
-        bantime  = 86400;
+        bantime = 86400;
       };
     };
   };

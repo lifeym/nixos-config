@@ -6,6 +6,11 @@ mkShell {
   buildInputs = [
     go-task
     git
+    treefmt
+    nixfmt
+    statix
+    deadnix
+    nickel
   ];
 
   shellHook = ''

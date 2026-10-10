@@ -3,10 +3,7 @@
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
 {
-  config,
-  mylib,
   pkgs,
-  pkgs-stable,
   pkgs-unstable,
   hostName,
   ...
@@ -50,7 +47,7 @@ in
 
     # Configure network proxy if necessary
     proxy.default = proxyCfg.httpProxy;
-    proxy.noProxy = proxyCfg.noProxy; #"localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
+    proxy.noProxy = proxyCfg.noProxy; # "localhost,127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,internal.domain,local,baidu.com,edu.cn";
   };
 
   # Set your time zone.
@@ -85,7 +82,10 @@ in
       ];
       settings.inputMethod = {
         GroupOrder."0" = "Default";
-        "Groups/0" = { Name = "Default"; DefaultIM = "pinyin"; };
+        "Groups/0" = {
+          Name = "Default";
+          DefaultIM = "pinyin";
+        };
         "Groups/0/Items/0".Name = "keyboard-us";
         "Groups/0/Items/1".Name = "pinyin";
       };
@@ -127,26 +127,33 @@ in
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
   users.users.lifeym = {
-    extraGroups = [ "networkmanager" "wheel" "libvirtd" ]; # Enable ‘sudo’ for the user.
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "libvirtd"
+    ]; # Enable ‘sudo’ for the user.
 
     # To keep user service to stay running after a user logs out.
     # See: https://wiki.nixos.org/wiki/Systemd/User_Services
     linger = true;
-    packages = with pkgs-unstable; [
-      calibre # E-book management application
-      digikam # Digital photo management application
-      espanso
-      kdePackages.ghostwriter # A Qt Markdown editor
-      keepassxc
-      obsidian
-      thunderbird
-      vscode
-      #wechat-uos # got errors from build...
-      wpsoffice-cn
-      zettlr
-    ] ++ (with pkgs;[
-      dbeaver-bin # because of dbeaver-ce-unstable uses java 21, which is not installed by pkgs-stable
-    ]);
+    packages =
+      with pkgs-unstable;
+      [
+        calibre # E-book management application
+        digikam # Digital photo management application
+        espanso
+        kdePackages.ghostwriter # A Qt Markdown editor
+        keepassxc
+        obsidian
+        thunderbird
+        vscode
+        #wechat-uos # got errors from build...
+        wpsoffice-cn
+        zettlr
+      ]
+      ++ (with pkgs; [
+        dbeaver-bin # because of dbeaver-ce-unstable uses java 21, which is not installed by pkgs-stable
+      ]);
   };
 
   # List packages installed in system profile. To search, run:
