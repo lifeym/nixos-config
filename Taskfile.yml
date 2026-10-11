@@ -112,3 +112,30 @@ tasks:
     desc: GC to reduce disk usage.
     cmds:
     - sudo nix-collect-garbage --delete-old
+
+  treefmt:
+    desc: Format all files by treefmt
+    deps:
+    - task: pre-commit-install
+    - task: generate-treefmt-config
+    cmds:
+    - treefmt --config-file config/generated/treefmt.toml
+
+  generate-treefmt-config:
+    desc: Generate treefmt config file
+    internal: true
+    vars:
+      DEST: 'config/generated'
+    cmds:
+    - '[ ! -d {{.DEST}} ] && mkdir -p {{.DEST}}'
+    - nickel export -f toml config/statix.ncl > {{.DEST}}/statix.toml
+    - nickel export -f toml config/treefmt.ncl > {{.DEST}}/treefmt.toml
+
+  pre-commit-install:
+    desc: Install pre-commit hooks
+    vars:
+      DEST: 'config/generated'
+    cmds:
+    - '[ ! -d {{.DEST}} ] && mkdir -p {{.DEST}}'
+    - nickel export -f yaml config/pre-commit.ncl > {{.DEST}}/pre-commit.yaml
+    - pre-commit install --config {{.DEST}}/pre-commit.yaml

@@ -5,7 +5,8 @@
       "**/hardware-configuration.nix",
       "Taskfile.yml",
       ".git",
-      ".vscode"
+      ".vscode",
+      "config/generated",
     ]
   },
 
@@ -36,7 +37,7 @@
 
       statix = {
         command = "statix",
-        options = ["check"],
+        options = ["check", "--config", "config/my-statix.toml"],
         includes = includesNix,
         priority = 2,
         no-positional-arg-support = true

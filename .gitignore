@@ -1,6 +1,5 @@
 result
 .vscode
 
-# nickel managed config files
-treefmt.toml
-statix.toml
+# ignore generated files
+config/generated
