@@ -19,7 +19,7 @@
           id = "treefmt",
           name = "treefmt",
           entry = "task treefmt",
-          language = "system",
+          language = "unsupported",
           pass_filenames = false, # important: since this is a task batch, no filenames needed.
         }
       ],
