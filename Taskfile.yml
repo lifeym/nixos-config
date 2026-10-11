@@ -127,7 +127,7 @@ tasks:
     vars:
       DEST: 'config/generated'
     cmds:
-    - '[ ! -d {{.DEST}} ] && mkdir -p {{.DEST}}'
+    - 'mkdir -p {{.DEST}}'
     - nickel export -f toml config/statix.ncl > {{.DEST}}/statix.toml
     - nickel export -f toml config/treefmt.ncl > {{.DEST}}/treefmt.toml
 
@@ -136,6 +136,6 @@ tasks:
     vars:
       DEST: 'config/generated'
     cmds:
-    - '[ ! -d {{.DEST}} ] && mkdir -p {{.DEST}}'
+    - 'mkdir -p {{.DEST}}'
     - nickel export -f yaml config/pre-commit.ncl > {{.DEST}}/pre-commit.yaml
     - pre-commit install --config {{.DEST}}/pre-commit.yaml
