@@ -419,12 +419,18 @@ in
   # See: https://go-acme.github.io/lego/dns/tencentcloud/index.html
   security.acme = {
     acceptTerms = true;
-    defaults.email = "i@lifeym.xyz";
+    defaults = {
+      email = "i@lifeym.xyz";
+      dnsPropagationCheck = false;
+      dnsResolver = "119.29.29.29:53";
+      enableDebugLogs = true;
+    };
     certs."lifeym.xyz" = {
       domain = "*.lifeym.xyz";
       dnsProvider = "tencentcloud";
       environmentFile = "${consts.statePath}acme/tencent";
       group = config.services.nginx.group;
+      reloadServices = [ "nginx.service" ];
     };
   };
 
