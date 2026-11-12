@@ -61,56 +61,62 @@ in
       }
     '';
 
-    virtualHosts = lib.mapAttrs (
-      _: vhostCfg:
-      {
-        onlySSL = true;
-        sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
-        sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
-        listen = [
-          {
-            addr = "${c.roles.web.ipv4}";
-            port = 443;
-            ssl = true;
-          }
-          {
-            addr = "[${c.roles.web.ipv6}]";
-            port = 443;
-            ssl = true;
-          }
-        ];
-        extraConfig = ''
-          # these two for upstream nginx
-          listen ${c.roles.web.ipv4}:8443 ssl proxy_protocol;
-          listen [${c.roles.web.ipv6}]:8443 ssl proxy_protocol;
+    virtualHosts = lib.mapAttrs (_: vhostCfg: {
+      onlySSL = true;
+      sslCertificate = "/var/lib/acme/lifeym.xyz/cert.pem";
+      sslCertificateKey = "/var/lib/acme/lifeym.xyz/key.pem";
+      listen = [
+        {
+          addr = "${c.roles.web.ipv4}";
+          port = 443;
+          ssl = true;
+        }
+        {
+          addr = "[${c.roles.web.ipv6}]";
+          port = 443;
+          ssl = true;
+        }
+      ];
+      extraConfig = ''
+        # these two for upstream nginx
+        listen ${c.roles.web.ipv4}:8443 ssl proxy_protocol;
+        listen [${c.roles.web.ipv6}]:8443 ssl proxy_protocol;
 
-          # and fetch real ip from upstream nginx
-          set_real_ip_from 192.168.0.0/24;
-          real_ip_header proxy_protocol;
-        '';
+        # and fetch real ip from upstream nginx
+        set_real_ip_from 192.168.0.0/24;
+        real_ip_header proxy_protocol;
+      ''
+      + (vhostCfg.extraConfig or "");
 
-        # merge locations
-        locations =
-          let
-            # merge locations.extraConfig
-            base = {
-              "/" = defaultLocation vhostCfg.target;
-            };
-            overrides = lib.mapAttrs (
-              _: locCfg:
-              (defaultLocation vhostCfg.target)
-              // lib.OptionalAttrs (locCfg ? extraLocationConfig) {
-                extraConfig = (defaultLocation vhostCfg.target).extraConfig + "\n" + locCfg.extraLocationConfig;
-              }
-            ) (vhostCfg.locations or { });
-          in
-          base // overrides;
-      }
-      // lib.optionalAttrs (vhostCfg ? extraConfig) {
-        # extraConfig = vhostCfg.extraConfig;
-        inherit (vhostCfg) extraConfig;
-      }
-    ) c.nginx.vhosts;
+      # merge locations
+      locations =
+        let
+          defaultLocCfg = defaultLocation vhostCfg.target;
+          # merge locations.extraConfig
+          base = {
+            "/" = defaultLocCfg;
+          };
+          overrides = lib.mapAttrs (
+            locName: locCfg:
+            if locName != "/" then
+              locCfg
+            else
+              let
+                merged = lib.concatStringsSep "\n" (
+                  lib.filter (x: x != null) [
+                    (defaultLocCfg.extraConfig or null)
+                    (locCfg.extraConfig or null)
+                  ]
+                );
+              in
+              if merged == "" then
+                defaultLocCfg // locCfg
+              else
+                (defaultLocCfg // locCfg) // { extraConfig = merged; }
+          ) (vhostCfg.locations or { });
+        in
+        base // overrides;
+    }) c.nginx.vhosts;
 
     streamConfig = ''
       log_format stream_log '$remote_addr [$time_local] $protocol $status $bytes_sent $bytes_received '

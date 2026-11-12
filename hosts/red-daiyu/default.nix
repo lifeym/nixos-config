@@ -320,6 +320,7 @@ in
       go-task
       htop
       neovim
+      nickel
       nmap # debug network
       nushell
       restic # backup tool
@@ -338,10 +339,9 @@ in
       difftastic
       git-credential-manager
       gitui
-
     ]
     ++ (with pkgs-unstable; [
-      v2ray
+      xray
     ]);
 
   environment.variables = {
